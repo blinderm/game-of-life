@@ -16,7 +16,7 @@ bool free_me = false;
 
 // adds the job, maintaining the sorted order of the queue
 void add_job(job_t task_fn, size_t interval) {
-  node_t* new_node = malloc(sizeof(node_t));
+  node_t* new_node = (node_t*) malloc(sizeof(node_t));
   new_node->job = task_fn;
   new_node->interval = interval;
   new_node->time_left = interval;
