@@ -8,6 +8,7 @@
 #include "bitmap.hh"
 #include "gui.hh"
 #include "util.hh"
+#include "scheduler.hh"
 
 using namespace std;
 
@@ -17,12 +18,6 @@ using namespace std;
 
 // Cell dimension
 #define CELL_DIM 10
-
-// Minimum time between clicks
-#define CREATE_INTERVAL 1000
-
-// Time step size
-#define DT 0.04
 
 // grid struct
 typedef struct grid {
@@ -35,84 +30,75 @@ typedef struct coord {
     int y;
 } coord_t;
 
-// Toggle 
+// Get input from the keyboard and execute proper command 
+void getKeyboardInput(bitmap* bmp, grid_t* g);
+
+// Get input from the mouse and toggle the appropriate cell's state/color
+void getMouseInput(bitmap* bmp, grid_t* g);
+
+// Toggle the cell's state, change the color accordingly
 void toggleCell(bitmap* bmp, grid_t* g, coord_t loc);
 
-
-/**
- * Entry point for the program
- * \param argc  The number of command line arguments
- * \param argv  An array of command line arguments
- */
-int main(int argc, char** argv)   {
-
-    // Seed the random number generator
-    srand(time(NULL));
-
-    // Create a GUI window
-    gui ui("Conway's Game of Life", WIDTH, HEIGHT);
-
-    // Render everything using this bitmap
-    bitmap bmp(WIDTH, HEIGHT);
-
-    // Save the last time the mouse was clicked
-    bool mouse_up = true;
-
-    // Start with the running flag set to true
-    bool running = true;
-
-    // Loop until we get a quit event
-    while(running) {
-
-        // Process events
-        SDL_Event event;
-        while(SDL_PollEvent(&event) == 1) {
-            // If the event is a quit event, then leave the loop
-            if(event.type == SDL_QUIT) running = false;
-        }
+// Update each cell in order to advance the simulation
+void updateCells(bitmap* bmp, grid_t* g);
 
 
-        /* TO DO 
-        // Get the current mouse state
-        int mouse_x, mouse_y;
-        uint32_t mouse_state = SDL_GetMouseState(&mouse_x, &mouse_y);
+// Get input from the keyboard and execute proper command 
+void getKeyboardInput(bitmap* bmp, grid_t* g) {
 
+    // Get the keyboard state
+    const uint8_t* keyboard = SDL_GetKeyboardState(NULL);
 
-        // If the left mouse button is pressed, get position and toggle cell
-        if(mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-            // Only create one if the mouse button has been released
-            if(mouse_up) {
-                addRandomGalaxy(mouse_x - x_offset, mouse_y - y_offset);
+    // If the "c" key is pressed, clear the board
+    if(keyboard[SDL_SCANCODE_C]) {
 
-                // Don't create another one until the mouse button is released
-                mouse_up = false;
+        rgb32 color = rgb32(0.0, 0.0, 0.0);
+
+        // Loop over points in the bitmap to change color
+        for (int x = 0; x < WIDTH; x++) {
+            for (int y = 0; y < HEIGHT; y++) {
+                bmp->set(x, y, color);
             }
-        } else {
-            // The mouse button was released
-            mouse_up = true;
         }
-        // Get the keyboard state
-        const uint8_t* keyboard = SDL_GetKeyboardState(NULL);
-
-
-        // If the "c" key is pressed, clear the board
-        if(keyboard[SDL_SCANCODE_UP]) {
-            y_offset++;
-            bmp.shiftDown();  // Shift pixels so scrolling doesn't create trails
-        }
-
-        // If the "p" key is pressed, toggle the pause-ness the simulation
-        if(keyboard[SDL_SCANCODE_DOWN]) {
-            y_offset--;
-            bmp.shiftUp();  // Shift pixels so scrolling doesn't create trails
-        }
-        */
-
-        ui.display(bmp);
+        memset(g->board, 0, sizeof(grid_t));
     }
-    return 0;
+
+    // If the "p" key is pressed, toggle the pause-ness the simulation
+    if(keyboard[SDL_SCANCODE_P]) {
+        // add a thing in the scheduler thing to be able to pause the thing
+    }
+
+    // If the "q" key is pressed, quit the simulation
+    if(keyboard[SDL_SCANCODE_Q]) {
+        // add a thing in the scheduler thing to be able to quit the thing 
+        // (alternatively, just try to free the mouse and see what happens!)
+    }
 }
 
+
+// Get input from the mouse and toggle the appropriate cell's state/color
+void getMouseInput(bitmap* bmp, grid_t* g) {
+
+    // Get the current mouse state
+    coord_t loc;
+    uint32_t mouse_state = SDL_GetMouseState(&loc.x, &loc.y);
+    // Save the last time the mouse was clicked (IS THIS NECESSARY?)
+    bool mouse_up = true;
+
+    // If the left mouse button is pressed, get position and toggle cell
+    if(mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+        // Only create one if the mouse button has been released
+        if(mouse_up) {
+            toggleCell(bmp, g, loc);
+
+            // Don't create another one until the mouse button is released
+            mouse_up = false;
+        }
+    } else {
+        // The mouse button was released
+        mouse_up = true;
+    }
+}
 
 
 // Toggle cell's color 
@@ -133,3 +119,44 @@ void toggleCell(bitmap* bmp, grid_t* g, coord_t loc) {
         }
     }
 }
+
+
+// Update each cell in order to advance the simulation
+void updateCells(bitmap* bmp, grid_t* g) {
+
+    // To do: things
+}
+
+
+/**
+ * Entry point for the program
+ * \param argc  The number of command line arguments
+ * \param argv  An array of command line arguments
+ */
+int main(int argc, char** argv) {
+
+    // Seed the random number generator
+    srand(time(NULL));
+
+    // Create a GUI window
+    gui ui("Conway's Game of Life", WIDTH, HEIGHT);
+
+    // Render everything using this bitmap
+    bitmap bmp(WIDTH, HEIGHT);
+
+    // Create the grid
+    grid_t* g = (grid_t*) malloc(sizeof(grid_t));
+    memset(g->board, 0, sizeof(grid_t));
+
+    
+    // TO DO: ALL THE SCHEDULING
+
+
+    
+    ui.display(bmp);
+
+    return 0;
+}
+
+
+
