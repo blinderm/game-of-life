@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.5.24)  16 APR 2017 17:27
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.5.24)  18 APR 2017 08:24
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -631,7 +631,7 @@ s/cm/cmbx12.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts
 /cm/cmr12.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/c
 m/cmsy10.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/public/tex-gyre/qc
 rr.pfb>
-Output written on CSC213_proposal.pdf (3 pages, 66869 bytes).
+Output written on CSC213_proposal.pdf (3 pages, 66889 bytes).
 PDF statistics:
  34 PDF objects out of 1000 (max. 8388607)
  24 compressed objects within 1 object stream
