@@ -30,21 +30,31 @@ typedef struct coord {
     int y;
 } coord_t;
 
+// bitmap screen variable
+bitmap* bmp;
+
+// grid for indicating cell state (dead or alive)
+grid_t* g;
+
+
 // Get input from the keyboard and execute proper command 
-void getKeyboardInput(bitmap* bmp, grid_t* g);
+void getKeyboardInput();
 
 // Get input from the mouse and toggle the appropriate cell's state/color
-void getMouseInput(bitmap* bmp, grid_t* g);
+void getMouseInput();
 
 // Toggle the cell's state, change the color accordingly
-void toggleCell(bitmap* bmp, grid_t* g, coord_t loc);
+void toggleCell(coord_t loc);
 
 // Update each cell in order to advance the simulation
-void updateCells(bitmap* bmp, grid_t* g);
+void updateCells();
+
+
+
 
 
 // Get input from the keyboard and execute proper command 
-void getKeyboardInput(bitmap* bmp, grid_t* g) {
+void getKeyboardInput() {
 
     // Get the keyboard state
     const uint8_t* keyboard = SDL_GetKeyboardState(NULL);
@@ -66,6 +76,7 @@ void getKeyboardInput(bitmap* bmp, grid_t* g) {
     // If the "p" key is pressed, toggle the pause-ness the simulation
     if(keyboard[SDL_SCANCODE_P]) {
         // add a thing in the scheduler thing to be able to pause the thing
+        printf("I pressed 'p'\n");
     }
 
     // If the "q" key is pressed, quit the simulation
@@ -77,7 +88,7 @@ void getKeyboardInput(bitmap* bmp, grid_t* g) {
 
 
 // Get input from the mouse and toggle the appropriate cell's state/color
-void getMouseInput(bitmap* bmp, grid_t* g) {
+void getMouseInput() {
 
     // Get the current mouse state
     coord_t loc;
@@ -89,7 +100,7 @@ void getMouseInput(bitmap* bmp, grid_t* g) {
     if(mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
         // Only create one if the mouse button has been released
         if(mouse_up) {
-            toggleCell(bmp, g, loc);
+            toggleCell(loc);
 
             // Don't create another one until the mouse button is released
             mouse_up = false;
@@ -102,7 +113,7 @@ void getMouseInput(bitmap* bmp, grid_t* g) {
 
 
 // Toggle cell's color 
-void toggleCell(bitmap* bmp, grid_t* g, coord_t loc) {
+void toggleCell(coord_t loc) {
     // Indicate in the boolean grid that cell's state has been changed
     g->board[loc.y][loc.x] = !g->board[loc.y][loc.x]; 
     // color for cell to be set
@@ -122,8 +133,9 @@ void toggleCell(bitmap* bmp, grid_t* g, coord_t loc) {
 
 
 // Update each cell in order to advance the simulation
-void updateCells(bitmap* bmp, grid_t* g) {
+void updateCells() {
 
+    //printf("I am updating cells, I swear\n");
     // To do: things
 }
 
@@ -141,19 +153,37 @@ int main(int argc, char** argv) {
     // Create a GUI window
     gui ui("Conway's Game of Life", WIDTH, HEIGHT);
 
-    // Render everything using this bitmap
-    bitmap bmp(WIDTH, HEIGHT);
+    bitmap bits(WIDTH, HEIGHT);
 
+    bmp = &bits;
+    // Render everything using this bitmap
+    // bitmap bmp(WIDTH, HEIGHT);
+    
     // Create the grid
     grid_t* g = (grid_t*) malloc(sizeof(grid_t));
     memset(g->board, 0, sizeof(grid_t));
+/*
+    // Create a job to read user input every 150ms
+    add_job(getKeyboardInput, 150);
+    add_job(getMouseInput, 150);
 
+    // Create a job to update apples every 120ms
+    add_job(updateCells, 120);
+    */
+       ui.display(*bmp);
     
-    // TO DO: ALL THE SCHEDULING
+    while(1) {
+        getKeyboardInput(); 
+        getMouseInput();
+        updateCells();
+    }
+    // TO DO: Generate a couple cells immediately
 
 
+    // Run the task queue
     
-    ui.display(bmp);
+    //run_scheduler();
+   
 
     return 0;
 }
