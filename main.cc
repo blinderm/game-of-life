@@ -37,11 +37,13 @@ bitmap* bmp;
 grid_t* g;
 
 
+
+
 // Get input from the keyboard and execute proper command 
 void getKeyboardInput();
 
 // Get input from the mouse and toggle the appropriate cell's state/color
-void getMouseInput();
+void getMouseInput(coord_t loc);
 
 // Toggle the cell's state, change the color accordingly
 void toggleCell(coord_t loc);
@@ -88,13 +90,7 @@ void getKeyboardInput() {
 
 
 // Get input from the mouse and toggle the appropriate cell's state/color
-void getMouseInput() {
-
-    // Get the current mouse state
-    coord_t loc;
-    uint32_t mouse_state = SDL_GetMouseState(&loc.x, &loc.y);
-    // Save the last time the mouse was clicked (IS THIS NECESSARY?)
-    bool mouse_up = true;
+void getMouseInput(coord_t loc) {
 
     // If the left mouse button is pressed, get position and toggle cell
     if(mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
@@ -135,7 +131,6 @@ void toggleCell(coord_t loc) {
 // Update each cell in order to advance the simulation
 void updateCells() {
 
-    //printf("I am updating cells, I swear\n");
     // To do: things
 }
 
@@ -158,11 +153,27 @@ int main(int argc, char** argv) {
     bmp = &bits;
     // Render everything using this bitmap
     // bitmap bmp(WIDTH, HEIGHT);
-    
+
     // Create the grid
     grid_t* g = (grid_t*) malloc(sizeof(grid_t));
     memset(g->board, 0, sizeof(grid_t));
-/*
+
+    SDL_Event event;
+    while(SDL_PollEvent(&event) == 1) {
+        // If the event is a quit event, then leave the loop
+        if(event.type == SDL_QUIT) {
+            stop_scheduler();
+        }
+    }
+
+    // Get the current mouse state
+    coord_t loc;
+    uint32_t mouse_state = SDL_GetMouseState(&loc.x, &loc.y);
+    // Save the last time the mouse was clicked (IS THIS NECESSARY?)
+    bool mouse_up = true;
+
+
+    /*
     // Create a job to read user input every 150ms
     add_job(getKeyboardInput, 150);
     add_job(getMouseInput, 150);
@@ -170,20 +181,20 @@ int main(int argc, char** argv) {
     // Create a job to update apples every 120ms
     add_job(updateCells, 120);
     */
-       ui.display(*bmp);
-    
+    ui.display(*bmp);
+
     while(1) {
         getKeyboardInput(); 
-        getMouseInput();
+        getMouseInput(loc);
         updateCells();
     }
     // TO DO: Generate a couple cells immediately
 
 
     // Run the task queue
-    
+
     //run_scheduler();
-   
+
 
     return 0;
 }

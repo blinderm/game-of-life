@@ -5,10 +5,10 @@
 #include <stdlib.h>
 
 /// The type of a task function
-typedef void (*job_t)();
+typedef void (*job_t)(void*);
 
 // Add a periodic job to the job list. The function `job_fn` should run every `interval` ms
-void add_job(job_t task_fn, size_t interval);
+void add_job(job_t task_fn, size_t interval, void* params);
 
 // Remove the current job from the job list
 void remove_job();

@@ -7,7 +7,6 @@ typedef struct node {
   job_t job;
   size_t interval;
   size_t time_left;
-  void* params;
   struct node* next;
 } node_t;
 
@@ -16,12 +15,11 @@ bool running;
 bool free_me = false;
 
 // adds the job, maintaining the sorted order of the queue
-void add_job(job_t task_fn, size_t interval, void* params) {
+void add_job(job_t task_fn, size_t interval) {
   node_t* new_node = (node_t*) malloc(sizeof(node_t));
   new_node->job = task_fn;
   new_node->interval = interval;
   new_node->time_left = interval;
-  new_node->params = params;
   if(queue == NULL) {
     new_node->next = NULL;
     queue = new_node;
@@ -57,7 +55,7 @@ void run_scheduler() {
   running = true;
   while(running && queue != NULL) {
     sleep_ms(queue->time_left);
-    queue->job(queue->params);
+    queue->job();
     // reduce all time_left by current node's time_left
     for(node_t* cur = queue->next; cur != NULL; cur = cur->next) {
       cur->time_left -= queue->time_left;
@@ -70,7 +68,7 @@ void run_scheduler() {
       free_me = false;
     } else {
       // re-enqueue head
-      add_job(ran->job, ran->interval, ran->params);
+      add_job(ran->job, ran->interval);
     }
   }
 }
