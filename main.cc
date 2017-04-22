@@ -30,6 +30,14 @@ typedef struct coord {
     int y;
 } coord_t;
 
+// function parameter struct
+typedef struct args {
+    coord_t loc;
+    const uint8_t* keyboard_state;
+    uint32_t mouse_state;
+    bool mouse_up;
+} args_t;
+
 // bitmap screen variable
 bitmap* bmp;
 
@@ -40,29 +48,29 @@ grid_t* g;
 
 
 // Get input from the keyboard and execute proper command 
-void getKeyboardInput();
+void getKeyboardInput(void* params);
 
 // Get input from the mouse and toggle the appropriate cell's state/color
-void getMouseInput(coord_t loc);
+void getMouseInput(void* params);
+
+// Update each cell in order to advance the simulation
+void updateCells(void* params);
+
 
 // Toggle the cell's state, change the color accordingly
 void toggleCell(coord_t loc);
-
-// Update each cell in order to advance the simulation
-void updateCells();
 
 
 
 
 
 // Get input from the keyboard and execute proper command 
-void getKeyboardInput() {
+void getKeyboardInput(void* params) {
 
-    // Get the keyboard state
-    const uint8_t* keyboard = SDL_GetKeyboardState(NULL);
+    args_t* args = (args_t*) params;
 
     // If the "c" key is pressed, clear the board
-    if(keyboard[SDL_SCANCODE_C]) {
+    if(args->keyboard_state[SDL_SCANCODE_C]) {
 
         rgb32 color = rgb32(0.0, 0.0, 0.0);
 
@@ -76,13 +84,13 @@ void getKeyboardInput() {
     }
 
     // If the "p" key is pressed, toggle the pause-ness the simulation
-    if(keyboard[SDL_SCANCODE_P]) {
+    if(args->keyboard_state[SDL_SCANCODE_P]) {
         // add a thing in the scheduler thing to be able to pause the thing
         printf("I pressed 'p'\n");
     }
 
     // If the "q" key is pressed, quit the simulation
-    if(keyboard[SDL_SCANCODE_Q]) {
+    if(args->keyboard_state[SDL_SCANCODE_Q]) {
         // add a thing in the scheduler thing to be able to quit the thing 
         // (alternatively, just try to free the mouse and see what happens!)
     }
@@ -90,26 +98,38 @@ void getKeyboardInput() {
 
 
 // Get input from the mouse and toggle the appropriate cell's state/color
-void getMouseInput(coord_t loc) {
+void getMouseInput(void* params) {
 
+    args_t* args = (args_t*) params;
+    
     // If the left mouse button is pressed, get position and toggle cell
-    if(mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+    if(args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
         // Only create one if the mouse button has been released
-        if(mouse_up) {
-            toggleCell(loc);
-
+        if(args->mouse_up) {
+            toggleCell(args->loc);
             // Don't create another one until the mouse button is released
-            mouse_up = false;
+            args->mouse_up = false;
         }
     } else {
         // The mouse button was released
-        mouse_up = true;
+        args->mouse_up = true;
     }
+}
+
+
+
+// Update each cell in order to advance the simulation
+void updateCells(void* params) {
+
+    args_t* args = (args_t*) params;
+    // To do: things
 }
 
 
 // Toggle cell's color 
 void toggleCell(coord_t loc) {
+    
+    printf("clicked coordinate: (%d, %d)\n", loc.x, loc.y);
     // Indicate in the boolean grid that cell's state has been changed
     g->board[loc.y][loc.x] = !g->board[loc.y][loc.x]; 
     // color for cell to be set
@@ -125,13 +145,6 @@ void toggleCell(coord_t loc) {
             bmp->set(x, y, color);
         }
     }
-}
-
-
-// Update each cell in order to advance the simulation
-void updateCells() {
-
-    // To do: things
 }
 
 
@@ -155,23 +168,8 @@ int main(int argc, char** argv) {
     // bitmap bmp(WIDTH, HEIGHT);
 
     // Create the grid
-    grid_t* g = (grid_t*) malloc(sizeof(grid_t));
+    g = (grid_t*) malloc(sizeof(grid_t));
     memset(g->board, 0, sizeof(grid_t));
-
-    SDL_Event event;
-    while(SDL_PollEvent(&event) == 1) {
-        // If the event is a quit event, then leave the loop
-        if(event.type == SDL_QUIT) {
-            stop_scheduler();
-        }
-    }
-
-    // Get the current mouse state
-    coord_t loc;
-    uint32_t mouse_state = SDL_GetMouseState(&loc.x, &loc.y);
-    // Save the last time the mouse was clicked (IS THIS NECESSARY?)
-    bool mouse_up = true;
-
 
     /*
     // Create a job to read user input every 150ms
@@ -181,15 +179,29 @@ int main(int argc, char** argv) {
     // Create a job to update apples every 120ms
     add_job(updateCells, 120);
     */
-    ui.display(*bmp);
 
     while(1) {
-        getKeyboardInput(); 
-        getMouseInput(loc);
-        updateCells();
+
+        SDL_Event event;
+        while(SDL_PollEvent(&event) == 1) {
+            // If the event is a quit event, then leave the loop
+            if(event.type == SDL_QUIT) {
+                stop_scheduler();
+            }
+        }
+
+        args_t* args = (args_t*) malloc(sizeof(args_t));
+        args->keyboard_state = SDL_GetKeyboardState(NULL);
+        args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
+        args->mouse_up = true;
+
+        getKeyboardInput((void*) args); 
+        getMouseInput((void*) args);
+        updateCells((void*) args);
+
+        ui.display(*bmp);
     }
     // TO DO: Generate a couple cells immediately
-
 
     // Run the task queue
 
