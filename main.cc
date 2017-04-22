@@ -86,13 +86,11 @@ void getKeyboardInput(void* params) {
     // If the "p" key is pressed, toggle the pause-ness the simulation
     if(args->keyboard_state[SDL_SCANCODE_P]) {
         // add a thing in the scheduler thing to be able to pause the thing
-        printf("I pressed 'p'\n");
     }
 
     // If the "q" key is pressed, quit the simulation
     if(args->keyboard_state[SDL_SCANCODE_Q]) {
-        // add a thing in the scheduler thing to be able to quit the thing 
-        // (alternatively, just try to free the mouse and see what happens!)
+        exit(0);
     }
 }
 
@@ -175,7 +173,6 @@ int main(int argc, char** argv) {
     // Create a job to read user input every 150ms
     add_job(getKeyboardInput, 150);
     add_job(getMouseInput, 150);
-
     // Create a job to update apples every 120ms
     add_job(updateCells, 120);
     */
@@ -210,6 +207,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-
-
-
