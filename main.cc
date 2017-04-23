@@ -45,6 +45,9 @@ bitmap* bmp;
 // grid for indicating cell state (dead or alive)
 grid_t* g;
 
+// Create a GUI window
+gui ui("Conway's Game of Life", WIDTH, HEIGHT);
+
 
 // Get input from the keyboard and execute proper command 
 void getKeyboardInput(void* params);
@@ -54,6 +57,9 @@ void getMouseInput(void* params);
 
 // Update each cell in order to advance the simulation
 void updateCells(void* params);
+
+// display the screen 
+void displayBMP(void* params);
 
 
 // Toggle the cell's state, change the color accordingly
@@ -65,6 +71,8 @@ void toggleCell(coord_t loc);
 // Get input from the keyboard and execute proper command 
 void getKeyboardInput(void* params) {
 
+    puts("getting keyboard input");
+    
     args_t* args = (args_t*) params;
 
     // If the "c" key is pressed, clear the board
@@ -88,7 +96,8 @@ void getKeyboardInput(void* params) {
 
     // If the "q" key is pressed, quit the simulation
     if(args->keyboard_state[SDL_SCANCODE_Q]) {
-        exit(0);
+        stop_scheduler();
+        return;
     }
 }
 
@@ -96,6 +105,8 @@ void getKeyboardInput(void* params) {
 // Get input from the mouse and toggle the appropriate cell's state/color
 void getMouseInput(void* params) {
 
+    puts("getting mouse input");
+    
     args_t* args = (args_t*) params;
     
     // If the left mouse button is pressed, get position and toggle cell
@@ -117,6 +128,8 @@ void getMouseInput(void* params) {
 
 // Update each cell in order to advance the simulation
 void updateCells(void* params) {
+
+    puts("updating cell");
 
     args_t* args = (args_t*) params;
     // TO DO: GPU WOOOOO
@@ -147,14 +160,15 @@ void toggleCell(coord_t loc) {
     }
 }
 
+// display screen
+void displayBMP(void* args) {
+    ui.display(*bmp);
+}
 
 /**
  * Entry point for the program
  */
 int main() {
-
-    // Create a GUI window
-    gui ui("Conway's Game of Life", WIDTH, HEIGHT);
 
     // Create the bitmap 
     bitmap bits(WIDTH, HEIGHT);
@@ -165,10 +179,23 @@ int main() {
     memset(g->board, 0, sizeof(grid_t));
 
 
-    // TO DO: all of this in the scheduler...
+    // struct of arguments for functions in scheduler
+    args_t* args = (args_t*) malloc(sizeof(args_t));
+    args->keyboard_state = SDL_GetKeyboardState(NULL);
+    args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
+    args->mouse_up = true;
 
+    /*
+    // Add jobs to scheduler
+    add_job(displayBMP, 1, (void*) args);
+    add_job(getKeyboardInput, 1, (void*) args);
+    add_job(getMouseInput, 1, (void*) args);
+    add_job(updateCells, 2, (void*) args);
+    
+    run_scheduler();
+    */
+    
     while(1) {
-
         SDL_Event event;
         while(SDL_PollEvent(&event) == 1) {
             // If the event is a quit event, then leave the loop
@@ -177,18 +204,12 @@ int main() {
             }
         }
 
-        args_t* args = (args_t*) malloc(sizeof(args_t));
-        args->keyboard_state = SDL_GetKeyboardState(NULL);
-        args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
-        args->mouse_up = true;
-
         getKeyboardInput((void*) args); 
         getMouseInput((void*) args);
         updateCells((void*) args);
 
         ui.display(*bmp);
     }
-
 
     return 0;
 }

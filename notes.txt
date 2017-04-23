@@ -4,4 +4,4 @@
 
 - sometimes g->board[loc.y][loc.x] gives values that are neither 1 nor 0 (in toggleCell, ~line 132) [Anna 04/23]
 
-
+- not sure where to put SDL_Event event polling thing so that is constantly happening. threads?!? ( :(((((( ) [Anna and Zachary (frown only from Anna) 04/23]
