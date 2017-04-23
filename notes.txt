@@ -1,0 +1,7 @@
+- segfault eventually if just click and hold on screen. possibly not freeing memory properly in scheduler? also, why is the coordinate registering as `clicked' so many times? [Anna 04/23]
+
+- have to press `q' to quit (can't use `x' thing on the panel) [Anna 04/23]
+
+- sometimes g->board[loc.y][loc.x] gives values that are neither 1 nor 0 (in toggleCell, ~line 132) [Anna 04/23]
+
+

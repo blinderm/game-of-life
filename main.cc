@@ -31,6 +31,7 @@ typedef struct coord {
 } coord_t;
 
 // function parameter struct
+// TO DO: not this? 
 typedef struct args {
     coord_t loc;
     const uint8_t* keyboard_state;
@@ -45,8 +46,6 @@ bitmap* bmp;
 grid_t* g;
 
 
-
-
 // Get input from the keyboard and execute proper command 
 void getKeyboardInput(void* params);
 
@@ -59,7 +58,6 @@ void updateCells(void* params);
 
 // Toggle the cell's state, change the color accordingly
 void toggleCell(coord_t loc);
-
 
 
 
@@ -85,7 +83,7 @@ void getKeyboardInput(void* params) {
 
     // If the "p" key is pressed, toggle the pause-ness the simulation
     if(args->keyboard_state[SDL_SCANCODE_P]) {
-        // add a thing in the scheduler thing to be able to pause the thing
+        // TO DO: add a thing in the scheduler thing to be able to pause the thing
     }
 
     // If the "q" key is pressed, quit the simulation
@@ -101,6 +99,7 @@ void getMouseInput(void* params) {
     args_t* args = (args_t*) params;
     
     // If the left mouse button is pressed, get position and toggle cell
+    // TO DO: make this thing toggle only once per click/release
     if(args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
         // Only create one if the mouse button has been released
         if(args->mouse_up) {
@@ -120,22 +119,25 @@ void getMouseInput(void* params) {
 void updateCells(void* params) {
 
     args_t* args = (args_t*) params;
-    // To do: things
+    // TO DO: GPU WOOOOO
 }
 
 
 // Toggle cell's color 
 void toggleCell(coord_t loc) {
-    
+   
     printf("clicked coordinate: (%d, %d)\n", loc.x, loc.y);
     // Indicate in the boolean grid that cell's state has been changed
+    printf("before: %d \n", g->board[loc.y][loc.x]);
     g->board[loc.y][loc.x] = !g->board[loc.y][loc.x]; 
+    printf("after: %d \n", g->board[loc.y][loc.x]);
     // color for cell to be set
     rgb32 color = g->board[loc.y][loc.x] ? rgb32(255.0, 255.0, 255.0) : rgb32(0.0, 0.0, 0.0);
 
     // Find upper-left corner in boolean grid of cell
-    int x_start = loc.x * CELL_DIM;
-    int y_start = loc.y * CELL_DIM;
+    int x_start = (loc.x / CELL_DIM) * CELL_DIM;
+    int y_start = (loc.y / CELL_DIM) * CELL_DIM;
+    printf("start loc: (%d, %d)\n", x_start, y_start);
 
     // Loop over points in the bitmap to change color
     for (int x = x_start; x < x_start + CELL_DIM; x++) {
@@ -148,34 +150,22 @@ void toggleCell(coord_t loc) {
 
 /**
  * Entry point for the program
- * \param argc  The number of command line arguments
- * \param argv  An array of command line arguments
  */
-int main(int argc, char** argv) {
-
-    // Seed the random number generator
-    srand(time(NULL));
+int main() {
 
     // Create a GUI window
     gui ui("Conway's Game of Life", WIDTH, HEIGHT);
 
+    // Create the bitmap 
     bitmap bits(WIDTH, HEIGHT);
-
     bmp = &bits;
-    // Render everything using this bitmap
-    // bitmap bmp(WIDTH, HEIGHT);
-
+    
     // Create the grid
     g = (grid_t*) malloc(sizeof(grid_t));
     memset(g->board, 0, sizeof(grid_t));
 
-    /*
-    // Create a job to read user input every 150ms
-    add_job(getKeyboardInput, 150);
-    add_job(getMouseInput, 150);
-    // Create a job to update apples every 120ms
-    add_job(updateCells, 120);
-    */
+
+    // TO DO: all of this in the scheduler...
 
     while(1) {
 
@@ -198,11 +188,6 @@ int main(int argc, char** argv) {
 
         ui.display(*bmp);
     }
-    // TO DO: Generate a couple cells immediately
-
-    // Run the task queue
-
-    //run_scheduler();
 
 
     return 0;
