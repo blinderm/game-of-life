@@ -1,9 +1,9 @@
 #if !defined(GUI_HH)
 #define GUI_HH
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <SDL.h>
 
