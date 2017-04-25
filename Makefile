@@ -1,6 +1,11 @@
-ROOT := .
-TARGETS := life
-CXXFLAGS := `sdl2-config --cflags` -g -O2 --std=c++11
-LDFLAGS  := `sdl2-config --libs` -lpthread
+CC := nvcc -arch sm_20
 
-include $(ROOT)/common.mk
+CFLAGS := -g --sdl2
+
+all: life
+
+clean:
+	@rm -f life
+
+life: life.cu
+	$(CC) $(CFLAGS) -o life life.cu
