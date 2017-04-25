@@ -1,10 +1,10 @@
 #if !defined(UTIL_HH)
 #define UTIL_HH
 
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include <sys/time.h>
 
