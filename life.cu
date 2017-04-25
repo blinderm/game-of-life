@@ -218,7 +218,7 @@ int main(int argc, char ** argv) {
   args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
   args->mouse_up = true;
 
-  /*
+  
   // Add jobs to scheduler
   add_job(displayBMP, 1, (void*) args);
   add_job(getKeyboardInput, 1, (void*) args);
@@ -226,27 +226,27 @@ int main(int argc, char ** argv) {
   add_job(updateCells, 2, (void*) args);
 
   run_scheduler();
-  */
+  
 
-  int i = 0;
+  // int i = 0;
 
-  while(!quit) {
-    printf("%d\n", i++);
-    SDL_Event event;
-    while(SDL_PollEvent(&event) == 1) {
-      // If the event is a quit event, then leave the loop
-      if(event.type == SDL_QUIT) {
-        quit = true;
-        stop_scheduler();
-      }
-    }
+  // while(!quit) {
+  //   printf("%d\n", i++);
+  //   SDL_Event event;
+  //   while(SDL_PollEvent(&event) == 1) {
+  //     // If the event is a quit event, then leave the loop
+  //     if(event.type == SDL_QUIT) {
+  //       quit = true;
+  //       stop_scheduler();
+  //     }
+  //   }
 
-    getKeyboardInput((void*) args); 
-    getMouseInput((void*) args);
-    updateCells((void*) args);
+  //   getKeyboardInput((void*) args); 
+  //   getMouseInput((void*) args);
+  //   updateCells((void*) args);
 
-    ui.display(*bmp);
-  }
+  //   ui.display(*bmp);
+  // }
 
   return 0;
 }
