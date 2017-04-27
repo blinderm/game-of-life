@@ -15,7 +15,7 @@ struct rgb32 {
   
   rgb32() : red(0), green(0), blue(0) {}
   
-  rgb32(uint8_t r, uint8_t g, uint8_t b) : red(r), green(g), blue(b) {}
+  __host__ __device__ rgb32(uint8_t r, uint8_t g, uint8_t b) : red(r), green(g), blue(b) {}
 };
 
 class bitmap {
@@ -45,7 +45,7 @@ public:
   size_t width() { return _width; }
   
   // Set the color at a given location
-  void set(int x, int y, rgb32 color) {
+  __host__ __device__ void set(int x, int y, rgb32 color) {
     // Instead of failing assertions for out-of-bounds pixels, just ignore them
     if(x < 0 || x >= _width || y < 0 || y >= _height) return;
     _data[y*_width+x] = color;

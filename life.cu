@@ -13,15 +13,15 @@
 using namespace std;
 
 // Screen size
-#define WIDTH 800
-#define HEIGHT 600
+#define BMP_WIDTH 800
+#define BMP_HEIGHT 600
 
 // Cell dimension
 #define CELL_DIM 10
 
 // Grid size
-#define GRID_WIDTH (WIDTH/CELL_DIM)
-#define GRID_HEIGHT (HEIGHT/CELL_DIM)
+#define GRID_WIDTH (BMP_WIDTH/CELL_DIM)
+#define GRID_HEIGHT (BMP_HEIGHT/CELL_DIM)
 
 // Threads per block
 #define THREADS_PER_BLOCK 64
@@ -32,8 +32,9 @@ using namespace std;
 
 // grid struct
 typedef struct grid {
-    bool board[(int) GRID_HEIGHT][(int) GRID_HEIGHT];
+    bool board[(int) GRID_WIDTH][(int) GRID_HEIGHT];
 } grid_t;
+
 
 // coordinate struct
 typedef struct coord {
@@ -58,7 +59,7 @@ bitmap* bmp;
 grid_t* g;
 
 // Create a GUI window
-gui ui("Conway's Game of Life", WIDTH, HEIGHT);
+gui ui("Conway's Game of Life", BMP_WIDTH, BMP_HEIGHT);
 
 
 // Get input from the keyboard and execute proper command 
@@ -80,8 +81,22 @@ void toggleCell(coord_t loc);
 void loadGrid(FILE * layout);
 
 
+/*
+void print_grid(grid_t* g) {
+    for (int i = 0; i < GRID_WIDTH; i++) {
+        for (int j = 0; j < GRID_HEIGHT; j++) {
+            putchar(g->board[i][j] ? 'X' : ' ');
+        }
+        putchar('\n');
+    }
+    putchar('\n');
+}
+*/
+
+
+
 //  Use Conway's update algorithm to decide whether or not to toggle cell 
-__global__ void outline() {
+__global__ void life_or_death(grid_t* gpu_g) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
    
@@ -97,33 +112,41 @@ __global__ void outline() {
     int alive_neighbors = 0;
     for(j = left; j <= right; j++) {
         for(i = top; i <= bottom; i++) {
-            alive_neighbors += (!(col == j && row == i) && g->board[i][j]);
+            alive_neighbors += (!(col == j && row == i) && gpu_g->board[i][j]) ? 1 : 0;
         }
     }
 
+    if (alive_neighbors > 0) {
+        printf("high\n");
+    }
+
+    // if (col > row) printf(" akdfjn\n");
+
     if (alive_neighbors < 2 || alive_neighbors > 3) {
         // clear the cell
-        g->board[row][col] = false;
+        gpu_g->board[row][col] = false;
     }
     else if (alive_neighbors == 2) {
         // do nothing!
     }
     else { // (alive_neighbors == 3)
         // light up the cell
-        g->board[row][col] = true;
+        gpu_g->board[row][col] = true;
     }
 }
 
-__global__ void updateBMP() {
+
+
+/* "this should absolutely happen in parallel, but i'm okay proceeding in serial so that we can work on other things" - a nervous david who transcends temporal dimensions
+__global__ void updateBMP(grid_t* gpu_g, bitmap* gpu_bmp) {
     size_t bmp_index = blockIdx.x * blockDim.x + threadIdx.x;
-    int bmp_row = bmp_index / WIDTH;
-    int bmp_col = bmp_index % WIDTH;
-    bool alive = g->board[bmp_row / CELL_SIZE][bmp_col / CELL_SIZE];   
+    int bmp_row = bmp_index / BMP_WIDTH;
+    int bmp_col = bmp_index % BMP_WIDTH;
+    bool alive = gpu_g->board[bmp_row / CELL_DIM][bmp_col / CELL_DIM];
     rgb32 color = alive ? WHITE : BLACK;
-    bmp->set(bmp_row, bmp_col, color);
-
+   // gpu_bmp->set(bmp_row, bmp_col, color);
 }
-
+*/
 
 
 
@@ -133,16 +156,16 @@ __global__ void updateBMP() {
 // Get input from the keyboard and execute proper command 
 void getKeyboardInput(void* params) {
 
-    puts("getting keyboard input");
+    //puts("getting keyboard input");
     args_t* args = (args_t*) params;
 
-    // If the "c" key is pressed, clear the board
+       // If the "c" key is pressed, clear the board
     if(args->keyboard_state[SDL_SCANCODE_C]) {
         puts("Cleared!\n");
 
         // Loop over points in the bitmap to change color
-        for (int x = 0; x < WIDTH; x++) {
-            for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < BMP_WIDTH; x++) {
+            for (int y = 0; y < BMP_HEIGHT; y++) {
                 bmp->set(x, y, BLACK);
             }
         }
@@ -168,7 +191,7 @@ void getKeyboardInput(void* params) {
 // Get input from the mouse and toggle the appropriate cell's state/color
 void getMouseInput(void* params) {
 
-    puts("getting mouse input");
+    //puts("getting mouse input");
 
     args_t* args = (args_t*) params;
 
@@ -195,10 +218,68 @@ void getMouseInput(void* params) {
 // Update each cell in order to advance the simulation
 void updateCells(void* params) {
 
-    puts("updating cell");
+    //puts("updating cell");
 
-    // args_t* args = (args_t*) params;
-    // TO DO: GPU WOOOOO
+    // allocate space for GPU grid
+    grid_t* gpu_g;
+    if (cudaMalloc(&gpu_g, sizeof(grid_t)) != cudaSuccess) {
+        fprintf(stderr, "Failed to allocate grid on GPU\n");
+        exit(2);
+    }
+
+    // alocate space for GPU bitmap
+    bitmap* gpu_bmp;
+    if (cudaMalloc(&gpu_bmp, sizeof(bitmap)) != cudaSuccess) {
+        fprintf(stderr, "Failed to allocate bitmap on GPU\n");
+        exit(2);
+    }
+
+    // copy the CPU grid to the GPU grid
+    if (cudaMemcpy(gpu_g, g, sizeof(grid_t), cudaMemcpyHostToDevice) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy grid to the GPU\n");
+    }
+
+    // copy the CPU bitmap to the GPU bitmap
+    if (cudaMemcpy(gpu_bmp, bmp, sizeof(bitmap), cudaMemcpyHostToDevice) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy bitmap to the GPU\n");
+    }
+
+    // number of block to run (rounding up to include all threads)
+    size_t grid_blocks = (GRID_WIDTH*GRID_HEIGHT + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
+
+    life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g);
+    cudaDeviceSynchronize();
+    //print_grid(gpu_g);
+   
+    // copy the GPU grid back to the CPU
+    if (cudaMemcpy(g, gpu_g, sizeof(grid_t), cudaMemcpyDeviceToHost) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy grid from the GPU\n");
+    }
+
+    // copy the CPU bitmap to the GPU bitmap
+    if (cudaMemcpy(bmp, gpu_bmp, sizeof(bitmap), cudaMemcpyDeviceToHost) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy bitmap from the GPU\n");
+    }
+
+
+
+
+    // Loop over points in the bitmap to change color
+    for(int row = 0; row < BMP_HEIGHT; row++){
+        for(int col = 0; col < BMP_WIDTH; col++){
+            rgb32 color = g->board[row / CELL_DIM][col / CELL_DIM] ? WHITE : BLACK;
+            bmp->set(row, col, color);
+        }
+    }
+    /*
+    updateBMP<<<bmp_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_bmp);
+    cudaDeviceSynchronize();
+    */
+    
+    // free everything we malloc'ed
+    cudaFree(gpu_g);
+    cudaFree(gpu_bmp);
+
 }
 
 
@@ -256,12 +337,15 @@ void loadGrid(FILE * layout) {
 int main(int argc, char ** argv) {
 
     // Create the bitmap 
-    bitmap bits(WIDTH, HEIGHT);
+    bitmap bits(BMP_WIDTH, BMP_HEIGHT);
     bmp = &bits;
 
     // Create the grid
     g = (grid_t*) malloc(sizeof(grid_t));
     memset(g->board, 0, sizeof(grid_t));
+
+
+
 
     if (argc > 1) {
         FILE * fp;
@@ -279,10 +363,10 @@ int main(int argc, char ** argv) {
 
 
     // Add jobs to scheduler
-    add_job(displayBMP, 1, (void*) args);
-    add_job(getKeyboardInput, 1, (void*) args);
-    add_job(getMouseInput, 1, (void*) args);
-    add_job(updateCells, 2, (void*) args);
+    add_job(displayBMP, 100, (void*) args);
+    add_job(getKeyboardInput, 100, (void*) args);
+    add_job(getMouseInput, 100, (void*) args);
+    add_job(updateCells, 3000, (void*) args);
 
     run_scheduler();
 
