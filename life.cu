@@ -1,4 +1,5 @@
 #include <math.h>
+
 #include <stdio.h>
 #include <time.h>
 #include <vector>
@@ -32,7 +33,7 @@ using namespace std;
 
 // grid struct
 typedef struct grid {
-    bool board[(int) GRID_WIDTH][(int) GRID_HEIGHT];
+    bool board[(int) GRID_HEIGHT][(int) GRID_WIDTH];
 } grid_t;
 
 
@@ -116,9 +117,11 @@ __global__ void life_or_death(grid_t* gpu_g) {
         }
     }
 
+    /*
     if (alive_neighbors > 0) {
         printf("high\n");
     }
+    */
 
     // if (col > row) printf(" akdfjn\n");
 
@@ -198,8 +201,8 @@ void getMouseInput(void* params) {
     // If the left mouse button is pressed, get position and toggle cell
     // TO DO: make this thing toggle only once per click/release
     // why is this bit & instead of logical &&?
-    if((args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y))) 
-            & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+    args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
+    if (args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
         printf("left down!\n");
         // Only create one if the mouse button has been released
         if(args->mouse_up) {
@@ -262,15 +265,19 @@ void updateCells(void* params) {
     }
 
 
-
-
+    g->board[40][10] = 1;
+    g->board[40][11] = 1;
+    g->board[40][12] = 1;
+    
     // Loop over points in the bitmap to change color
     for(int row = 0; row < BMP_HEIGHT; row++){
         for(int col = 0; col < BMP_WIDTH; col++){
             rgb32 color = g->board[row / CELL_DIM][col / CELL_DIM] ? WHITE : BLACK;
-            bmp->set(row, col, color);
+            bmp->set(col, row, color);
         }
     }
+
+    
     /*
     updateBMP<<<bmp_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_bmp);
     cudaDeviceSynchronize();
@@ -280,24 +287,30 @@ void updateCells(void* params) {
     cudaFree(gpu_g);
     cudaFree(gpu_bmp);
 
+    ui.display(*bmp);
+
 }
 
 
 // Toggle cell's color 
 void toggleCell(coord_t loc) {
 
-    printf("clicked coordinate: (%d, %d)\n", loc.x, loc.y);
     // Indicate in the boolean grid that cell's state has been changed
     printf("before: %d \n", g->board[loc.y][loc.x]);
-    g->board[loc.y][loc.x] = !g->board[loc.y][loc.x]; 
-    printf("after: %d \n", g->board[loc.y][loc.x]);
+    if (g->board[loc.y][loc.x]) {
+        g->board[loc.y][loc.x] = false;
+        puts("set to false");
+    } else {
+        g->board[loc.y][loc.x] = true;
+    } 
     // color for cell to be set
     rgb32 color = g->board[loc.y][loc.x] ? WHITE : BLACK;
+    printf("after: %d \n", g->board[loc.y][loc.x]);
 
     // Find upper-left corner in boolean grid of cell
     int x_start = (loc.x / CELL_DIM) * CELL_DIM;
     int y_start = (loc.y / CELL_DIM) * CELL_DIM;
-    printf("start loc: (%d, %d)\n", x_start, y_start);
+    //printf("start loc: (%d, %d)\n", x_start, y_start);
 
     // Loop over points in the bitmap to change color
     for (int x = x_start; x < x_start + CELL_DIM; x++) {
@@ -305,7 +318,9 @@ void toggleCell(coord_t loc) {
             bmp->set(x, y, color);
         }
     }
+    ui.display(*bmp);
 }
+
 
 // display screen
 void displayBMP(void* args) {
@@ -342,10 +357,11 @@ int main(int argc, char ** argv) {
 
     // Create the grid
     g = (grid_t*) malloc(sizeof(grid_t));
-    memset(g->board, 0, sizeof(grid_t));
-
-
-
+    for (int col = 0; col < GRID_WIDTH; col++) {
+        for (int row = 0; row < GRID_HEIGHT; row++) {
+            g->board[row][col] = false;
+        }
+    }
 
     if (argc > 1) {
         FILE * fp;
@@ -354,19 +370,19 @@ int main(int argc, char ** argv) {
         fclose(fp);
     }
 
-
     // struct of arguments for functions in scheduler
     args_t* args = (args_t*) malloc(sizeof(args_t));
     args->keyboard_state = SDL_GetKeyboardState(NULL);
     args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
     args->mouse_up = true;
 
+    ui.display(*bmp);
 
     // Add jobs to scheduler
-    add_job(displayBMP, 100, (void*) args);
+    //add_job(displayBMP, 100, (void*) args);
     add_job(getKeyboardInput, 100, (void*) args);
-    add_job(getMouseInput, 100, (void*) args);
-    add_job(updateCells, 3000, (void*) args);
+    add_job(getMouseInput, 2000, (void*) args);
+    //add_job(updateCells, 4000, (void*) args);
 
     run_scheduler();
 
