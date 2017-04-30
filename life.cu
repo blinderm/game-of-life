@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <SDL.h>
+#include <pthread.h>
 
 #include "bitmap.hh"
 #include "gui.hh"
@@ -31,6 +32,11 @@ using namespace std;
 #define WHITE rgb32(255.,255.,255.)
 #define BLACK rgb32(0.,0.,0.)
 
+
+
+// barrier for threads
+static pthread_barrier_t barrier;
+
 // grid struct
 typedef struct grid {
     bool board[(int) GRID_HEIGHT][(int) GRID_WIDTH];
@@ -43,15 +49,22 @@ typedef struct coord {
     int y;
 } coord_t;
 
-bool quit = false;
+// for old times' sake
+bool we_tried = true;
 
-// function parameter struct
-typedef struct args {
+// mouse function parameter struct
+typedef struct mouse_args {
     coord_t loc;
-    const uint8_t* keyboard_state;
     uint32_t mouse_state;
     bool mouse_up;
-} args_t;
+} mouse_args_t;
+
+// keyboard function parameter struct
+typedef struct keyboard_args {
+    coord_t loc;
+    const uint8_t* keyboard_state;
+} keyboard_args_t;
+
 
 // bitmap screen variable
 bitmap* bmp;
@@ -64,10 +77,10 @@ gui ui("Conway's Game of Life", BMP_WIDTH, BMP_HEIGHT);
 
 
 // Get input from the keyboard and execute proper command 
-void getKeyboardInput(void* params);
+void* getKeyboardInput(void* params);
 
 // Get input from the mouse and toggle the appropriate cell's state/color
-void getMouseInput(void* params);
+void* getMouseInput(void* params);
 
 // Update each cell in order to advance the simulation
 void updateCells(void* params);
@@ -83,16 +96,16 @@ void loadGrid(FILE * layout);
 
 
 /*
-void print_grid(grid_t* g) {
-    for (int i = 0; i < GRID_WIDTH; i++) {
-        for (int j = 0; j < GRID_HEIGHT; j++) {
-            putchar(g->board[i][j] ? 'X' : ' ');
-        }
-        putchar('\n');
-    }
-    putchar('\n');
-}
-*/
+   void print_grid(grid_t* g) {
+   for (int i = 0; i < GRID_WIDTH; i++) {
+   for (int j = 0; j < GRID_HEIGHT; j++) {
+   putchar(g->board[i][j] ? 'X' : ' ');
+   }
+   putchar('\n');
+   }
+   putchar('\n');
+   }
+ */
 
 
 
@@ -100,7 +113,7 @@ void print_grid(grid_t* g) {
 __global__ void life_or_death(grid_t* gpu_g) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
-   
+
     // first thing's first: establish boundaries
     int row = index / GRID_WIDTH;
     int col = index % GRID_WIDTH;
@@ -118,10 +131,10 @@ __global__ void life_or_death(grid_t* gpu_g) {
     }
 
     /*
-    if (alive_neighbors > 0) {
-        printf("high\n");
-    }
-    */
+       if (alive_neighbors > 0) {
+       printf("high\n");
+       }
+     */
 
     // if (col > row) printf(" akdfjn\n");
 
@@ -141,15 +154,15 @@ __global__ void life_or_death(grid_t* gpu_g) {
 
 
 /* "this should absolutely happen in parallel, but i'm okay proceeding in serial so that we can work on other things" - a nervous david who transcends temporal dimensions
-__global__ void updateBMP(grid_t* gpu_g, bitmap* gpu_bmp) {
-    size_t bmp_index = blockIdx.x * blockDim.x + threadIdx.x;
-    int bmp_row = bmp_index / BMP_WIDTH;
-    int bmp_col = bmp_index % BMP_WIDTH;
-    bool alive = gpu_g->board[bmp_row / CELL_DIM][bmp_col / CELL_DIM];
-    rgb32 color = alive ? WHITE : BLACK;
-   // gpu_bmp->set(bmp_row, bmp_col, color);
+   __global__ void updateBMP(grid_t* gpu_g, bitmap* gpu_bmp) {
+   size_t bmp_index = blockIdx.x * blockDim.x + threadIdx.x;
+   int bmp_row = bmp_index / BMP_WIDTH;
+   int bmp_col = bmp_index % BMP_WIDTH;
+   bool alive = gpu_g->board[bmp_row / CELL_DIM][bmp_col / CELL_DIM];
+   rgb32 color = alive ? WHITE : BLACK;
+// gpu_bmp->set(bmp_row, bmp_col, color);
 }
-*/
+ */
 
 
 
@@ -157,71 +170,83 @@ __global__ void updateBMP(grid_t* gpu_g, bitmap* gpu_bmp) {
 
 
 // Get input from the keyboard and execute proper command 
-void getKeyboardInput(void* params) {
+void* getKeyboardInput(void* params) {
 
-    //puts("getting keyboard input");
-    args_t* args = (args_t*) params;
+    while (we_tried) {
 
-       // If the "c" key is pressed, clear the board
-    if(args->keyboard_state[SDL_SCANCODE_C]) {
-        puts("Cleared!\n");
+        pthread_barrier_wait(&barrier);
+        //puts("getting keyboard input");
+        keyboard_args_t* args = (keyboard_args_t*) params;
 
-        // Loop over points in the bitmap to change color
-        for (int x = 0; x < BMP_WIDTH; x++) {
-            for (int y = 0; y < BMP_HEIGHT; y++) {
-                bmp->set(x, y, BLACK);
+        // If the "c" key is pressed, clear the board
+        if(args->keyboard_state[SDL_SCANCODE_C]) {
+            puts("Cleared!\n");
+
+            // Loop over points in the bitmap to change color
+            for (int x = 0; x < BMP_WIDTH; x++) {
+                for (int y = 0; y < BMP_HEIGHT; y++) {
+                    bmp->set(x, y, BLACK);
+                }
             }
+            memset(g->board, 0, sizeof(grid_t));
         }
-        memset(g->board, 0, sizeof(grid_t));
+
+        // If the "p" key is pressed, toggle the pause-ness the simulation
+        if(args->keyboard_state[SDL_SCANCODE_P]) {
+            puts("Pause!\n");
+            // TO DO: add a thing in the scheduler thing to be able to pause the thing
+        }
+
+        // If the "q" key is pressed, quit the simulation
+        if(args->keyboard_state[SDL_SCANCODE_Q]) {
+            puts("quit!\n");
+            we_tried = false;
+            stop_scheduler();
+            return NULL;
+        }
+
+        pthread_barrier_wait(&barrier);
     }
 
-    // If the "p" key is pressed, toggle the pause-ness the simulation
-    if(args->keyboard_state[SDL_SCANCODE_P]) {
-        puts("Pause!\n");
-        // TO DO: add a thing in the scheduler thing to be able to pause the thing
-    }
-
-    // If the "q" key is pressed, quit the simulation
-    if(args->keyboard_state[SDL_SCANCODE_Q]) {
-        puts("quit!\n");
-        quit = true;
-        stop_scheduler();
-        return;
-    }
+    return NULL;
 }
 
 
 // Get input from the mouse and toggle the appropriate cell's state/color
-void getMouseInput(void* params) {
+void* getMouseInput(void* params) {
 
-    //puts("getting mouse input");
+    while(we_tried) {
+        pthread_barrier_wait(&barrier);
 
-    args_t* args = (args_t*) params;
+        mouse_args_t* args = (mouse_args_t*) params;
 
-    // If the left mouse button is pressed, get position and toggle cell
-    // TO DO: make this thing toggle only once per click/release
-    // why is this bit & instead of logical &&?
-    args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
-    if (args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-        printf("left down!\n");
-        // Only create one if the mouse button has been released
-        if(args->mouse_up) {
-            toggleCell(args->loc);
-            // Don't create another one until the mouse button is released
-            args->mouse_up = false;
+        // If the left mouse button is pressed, get position and toggle cell
+        // TO DO: make this thing toggle only once per click/release
+        // why is this bit & instead of logical &&?
+        args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
+        if (args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+            printf("left down!\n");
+            // Only create one if the mouse button has been released
+            if(args->mouse_up) {
+                toggleCell(args->loc);
+                // Don't create another one until the mouse button is released
+                args->mouse_up = false;
+            }
+        } else {
+            // The mouse button was released
+            args->mouse_up = true;
         }
-    } else {
-        // The mouse button was released
-        args->mouse_up = true;
+
+        pthread_barrier_wait(&barrier);
     }
+
+    return NULL;
 }
 
 
 
 // Update each cell in order to advance the simulation
 void updateCells(void* params) {
-
-    //puts("updating cell");
 
     // allocate space for GPU grid
     grid_t* gpu_g;
@@ -253,7 +278,7 @@ void updateCells(void* params) {
     life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g);
     cudaDeviceSynchronize();
     //print_grid(gpu_g);
-   
+
     // copy the GPU grid back to the CPU
     if (cudaMemcpy(g, gpu_g, sizeof(grid_t), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid from the GPU\n");
@@ -268,7 +293,7 @@ void updateCells(void* params) {
     g->board[40][10] = 1;
     g->board[40][11] = 1;
     g->board[40][12] = 1;
-    
+
     // Loop over points in the bitmap to change color
     for(int row = 0; row < BMP_HEIGHT; row++){
         for(int col = 0; col < BMP_WIDTH; col++){
@@ -277,12 +302,12 @@ void updateCells(void* params) {
         }
     }
 
-    
+
     /*
-    updateBMP<<<bmp_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_bmp);
-    cudaDeviceSynchronize();
-    */
-    
+       updateBMP<<<bmp_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_bmp);
+       cudaDeviceSynchronize();
+     */
+
     // free everything we malloc'ed
     cudaFree(gpu_g);
     cudaFree(gpu_bmp);
@@ -370,42 +395,60 @@ int main(int argc, char ** argv) {
         fclose(fp);
     }
 
-    // struct of arguments for functions in scheduler
-    args_t* args = (args_t*) malloc(sizeof(args_t));
-    args->keyboard_state = SDL_GetKeyboardState(NULL);
-    args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
-    args->mouse_up = true;
+    // struct of arguments for mouse function
+    mouse_args_t* mouse_args = (mouse_args_t*) malloc(sizeof(mouse_args_t));
+    mouse_args->mouse_state = SDL_GetMouseState(&(mouse_args->loc.x), &(mouse_args->loc.y));
+    mouse_args->mouse_up = true;
+
+    // struct of arguments for keyboard function
+    keyboard_args_t* keyboard_args = (keyboard_args_t*) malloc(sizeof(keyboard_args_t));
+    keyboard_args->keyboard_state = SDL_GetKeyboardState(NULL);
 
     ui.display(*bmp);
 
-    // Add jobs to scheduler
-    //add_job(displayBMP, 100, (void*) args);
-    add_job(getKeyboardInput, 100, (void*) args);
-    add_job(getMouseInput, 2000, (void*) args);
-    //add_job(updateCells, 4000, (void*) args);
+    // Initialize barrier
+    pthread_barrier_init(&barrier, NULL, 3);
 
-    run_scheduler();
+    // Set up threads
+    pthread_t mouse_thread, keyboard_thread;
 
+    if (pthread_create(&mouse_thread, NULL, getMouseInput, (void*) mouse_args)) {
+        perror("error in pthread_create.\n");
+        exit(2);
+    }
+    if (pthread_create(&keyboard_thread, NULL, getKeyboardInput, (void*) keyboard_args)) {
+        perror("error in pthread_create.\n");
+        exit(2);
+    }
 
-    // int i = 0;
+    // Loop until we get a quit event
+    while(we_tried) {
+        // Process events
+        SDL_Event event;
+        while(SDL_PollEvent(&event) == 1) {
+            // If the event is a quit event, then leave the loop
+            if(event.type == SDL_QUIT) we_tried = false;
+        }
 
-    // while(!quit) {
-    //   printf("%d\n", i++);
-    //   SDL_Event event;
-    //   while(SDL_PollEvent(&event) == 1) {
-    //     // If the event is a quit event, then leave the loop
-    //     if(event.type == SDL_QUIT) {
-    //       quit = true;
-    //       stop_scheduler();
-    //     }
-    //   }
+        // thread barriers
+        pthread_barrier_wait(&barrier);
+        pthread_barrier_wait(&barrier);
 
-    //   getKeyboardInput((void*) args); 
-    //   getMouseInput((void*) args);
-    //   updateCells((void*) args);
+        // Display the rendered frame
+        ui.display(*bmp);
+   }
 
-    //   ui.display(*bmp);
-    // }
+    // join threads
+    if (pthread_join(mouse_thread, NULL)) {
+        perror("Failed joining.\n");
+        exit(2);
+    }
+    if (pthread_join(keyboard_thread, NULL)) {
+        perror("Failed joining.\n");
+        exit(2);    
+    }
 
     return 0;
 }
+
+// for zachary
