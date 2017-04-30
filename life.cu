@@ -201,8 +201,7 @@ void* getKeyboardInput(void* params) {
         if(args->keyboard_state[SDL_SCANCODE_Q]) {
             puts("quit!\n");
             we_tried = false;
-            stop_scheduler();
-            return NULL;
+            //return NULL;
         }
 
         pthread_barrier_wait(&barrier);
@@ -224,6 +223,7 @@ void* getMouseInput(void* params) {
         // TO DO: make this thing toggle only once per click/release
         // why is this bit & instead of logical &&?
         args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
+
         if (args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
             printf("left down!\n");
             // Only create one if the mouse button has been released
@@ -320,8 +320,10 @@ void updateCells(void* params) {
 // Toggle cell's color 
 void toggleCell(coord_t loc) {
 
+    
     // Indicate in the boolean grid that cell's state has been changed
     printf("before: %d \n", g->board[loc.y][loc.x]);
+    
     if (g->board[loc.y][loc.x]) {
         g->board[loc.y][loc.x] = false;
         puts("set to false");
@@ -343,7 +345,6 @@ void toggleCell(coord_t loc) {
             bmp->set(x, y, color);
         }
     }
-    ui.display(*bmp);
 }
 
 
