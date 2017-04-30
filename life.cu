@@ -65,6 +65,7 @@ typedef struct keyboard_args {
     const uint8_t* keyboard_state;
 } keyboard_args_t;
 
+bool paused = true;
 
 // bitmap screen variable
 bitmap* bmp;
@@ -167,7 +168,7 @@ void* getKeyboardInput(void* params) {
         // If the "p" key is pressed, toggle the pause-ness the simulation
         if(args->keyboard_state[SDL_SCANCODE_P]) {
             puts("Pause!\n");
-            // TO DO: add a thing in the scheduler thing to be able to pause the thing
+            paused = !(paused);
         }
 
         // If the "q" key is pressed, quit the simulation
@@ -195,9 +196,10 @@ void* getMouseInput(void* params) {
         // TO DO: make this thing toggle only once per click/release
         // why is this bit & instead of logical &&?
         args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
+        //printf("[%d,%d]\n", args->loc.x, args->loc.y);
 
         if (args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-            printf("left down!\n");
+            //printf("left down!\n");
             // Only create one if the mouse button has been released
             if(args->mouse_up) {
                 toggleCell(args->loc);
@@ -219,6 +221,17 @@ void* getMouseInput(void* params) {
 
 // Update each cell in order to advance the simulation
 void updateCells(void* params) {
+
+    int counter = 0;
+    for (int i = 0; i < GRID_HEIGHT; i++) {
+      for(int j = 0; j < GRID_WIDTH; j++) {
+        if (g->board[j][i]) {
+          //printf("(%d,%d)\n", j, i);
+          counter++;
+        }
+      }
+    }
+    //printf("%d alive\n", counter);
 
     // allocate space for GPU grid
     grid_t* gpu_g;
@@ -262,9 +275,6 @@ void updateCells(void* params) {
     }
 
 
-    g->board[40][10] = 1;
-    g->board[40][11] = 1;
-    g->board[40][12] = 1;
 
     // Loop over points in the bitmap to change color
     for(int row = 0; row < BMP_HEIGHT; row++){
@@ -284,7 +294,7 @@ void updateCells(void* params) {
     cudaFree(gpu_g);
     cudaFree(gpu_bmp);
 
-    ui.display(*bmp);
+    // ui.display(*bmp);
 
 }
 
@@ -294,7 +304,7 @@ void toggleCell(coord_t loc) {
 
     
     // Indicate in the boolean grid that cell's state has been changed
-    printf("before: %d \n", g->board[loc.y][loc.x]);
+    printf("before: %d \n", g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
     
     // if (g->board[loc.y][loc.x]) {
     //     g->board[loc.y][loc.x] = false;
@@ -303,9 +313,9 @@ void toggleCell(coord_t loc) {
     //     g->board[loc.y][loc.x] = true;
     // } 
     // color for cell to be set
-    g->board[loc.y][loc.x] = true;
-    rgb32 color = g->board[loc.y][loc.x] ? WHITE : BLACK;
-    printf("after: %d \n", g->board[loc.y][loc.x]);
+    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = true;
+    rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? WHITE : BLACK;
+    printf("after: %d \n", g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
 
     // Find upper-left corner in boolean grid of cell
     int x_start = (loc.x / CELL_DIM) * CELL_DIM;
@@ -408,8 +418,10 @@ int main(int argc, char ** argv) {
         pthread_barrier_wait(&barrier); // Releases the input threads to get input;
         pthread_barrier_wait(&barrier); // Waits for the input threads to finish
 
-        updateCells(keyboard_args);
-        sleep_ms(50);
+        if (!paused) {
+          updateCells(keyboard_args);
+          sleep_ms(50);
+        }
 
 
         // Display the rendered frame
