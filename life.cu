@@ -50,7 +50,7 @@ typedef struct coord {
 } coord_t;
 
 // for old times' sake
-bool we_tried = true;
+bool you_failed = true;
 
 // mouse function parameter struct
 typedef struct mouse_args {
@@ -93,20 +93,6 @@ void toggleCell(coord_t loc);
 
 // Set up the grid with an existing layout specified by a file
 void loadGrid(FILE * layout);
-
-
-/*
-   void print_grid(grid_t* g) {
-   for (int i = 0; i < GRID_WIDTH; i++) {
-   for (int j = 0; j < GRID_HEIGHT; j++) {
-   putchar(g->board[i][j] ? 'X' : ' ');
-   }
-   putchar('\n');
-   }
-   putchar('\n');
-   }
- */
-
 
 
 //  Use Conway's update algorithm to decide whether or not to toggle cell 
@@ -153,28 +139,15 @@ __global__ void life_or_death(grid_t* gpu_g) {
 
 
 
-/* "this should absolutely happen in parallel, but i'm okay proceeding in serial so that we can work on other things" - a nervous david who transcends temporal dimensions
-   __global__ void updateBMP(grid_t* gpu_g, bitmap* gpu_bmp) {
-   size_t bmp_index = blockIdx.x * blockDim.x + threadIdx.x;
-   int bmp_row = bmp_index / BMP_WIDTH;
-   int bmp_col = bmp_index % BMP_WIDTH;
-   bool alive = gpu_g->board[bmp_row / CELL_DIM][bmp_col / CELL_DIM];
-   rgb32 color = alive ? WHITE : BLACK;
-// gpu_bmp->set(bmp_row, bmp_col, color);
-}
- */
-
-
-
 
 
 
 // Get input from the keyboard and execute proper command 
 void* getKeyboardInput(void* params) {
 
-    while (we_tried) {
+    while (you_failed) {
 
-        pthread_barrier_wait(&barrier);
+        pthread_barrier_wait(&barrier); // Waits for the Poll Event in main
         //puts("getting keyboard input");
         keyboard_args_t* args = (keyboard_args_t*) params;
 
@@ -200,11 +173,11 @@ void* getKeyboardInput(void* params) {
         // If the "q" key is pressed, quit the simulation
         if(args->keyboard_state[SDL_SCANCODE_Q]) {
             puts("quit!\n");
-            we_tried = false;
-            //return NULL;
+            you_failed = false;
         }
+        
 
-        pthread_barrier_wait(&barrier);
+        pthread_barrier_wait(&barrier); // Releases the main function to run updates
     }
 
     return NULL;
@@ -214,10 +187,9 @@ void* getKeyboardInput(void* params) {
 // Get input from the mouse and toggle the appropriate cell's state/color
 void* getMouseInput(void* params) {
 
-    while(we_tried) {
-        pthread_barrier_wait(&barrier);
-
-        mouse_args_t* args = (mouse_args_t*) params;
+    mouse_args_t* args = (mouse_args_t*) params;
+    while(you_failed) {
+        pthread_barrier_wait(&barrier); // Waits for the Poll Event in main
 
         // If the left mouse button is pressed, get position and toggle cell
         // TO DO: make this thing toggle only once per click/release
@@ -237,7 +209,7 @@ void* getMouseInput(void* params) {
             args->mouse_up = true;
         }
 
-        pthread_barrier_wait(&barrier);
+        pthread_barrier_wait(&barrier); // Releases the main function to run updates
     }
 
     return NULL;
@@ -324,20 +296,20 @@ void toggleCell(coord_t loc) {
     // Indicate in the boolean grid that cell's state has been changed
     printf("before: %d \n", g->board[loc.y][loc.x]);
     
-    if (g->board[loc.y][loc.x]) {
-        g->board[loc.y][loc.x] = false;
-        puts("set to false");
-    } else {
-        g->board[loc.y][loc.x] = true;
-    } 
+    // if (g->board[loc.y][loc.x]) {
+    //     g->board[loc.y][loc.x] = false;
+    //     puts("set to false");
+    // } else {
+    //     g->board[loc.y][loc.x] = true;
+    // } 
     // color for cell to be set
+    g->board[loc.y][loc.x] = true;
     rgb32 color = g->board[loc.y][loc.x] ? WHITE : BLACK;
     printf("after: %d \n", g->board[loc.y][loc.x]);
 
     // Find upper-left corner in boolean grid of cell
     int x_start = (loc.x / CELL_DIM) * CELL_DIM;
     int y_start = (loc.y / CELL_DIM) * CELL_DIM;
-    //printf("start loc: (%d, %d)\n", x_start, y_start);
 
     // Loop over points in the bitmap to change color
     for (int x = x_start; x < x_start + CELL_DIM; x++) {
@@ -348,10 +320,7 @@ void toggleCell(coord_t loc) {
 }
 
 
-// display screen
-void displayBMP(void* args) {
-    ui.display(*bmp);
-}
+
 
 void loadGrid(FILE * layout) {
     coord_t loc;
@@ -423,17 +392,25 @@ int main(int argc, char ** argv) {
     }
 
     // Loop until we get a quit event
-    while(we_tried) {
+    while(you_failed) {
         // Process events
         SDL_Event event;
+
         while(SDL_PollEvent(&event) == 1) {
             // If the event is a quit event, then leave the loop
-            if(event.type == SDL_QUIT) we_tried = false;
+            if(event.type == SDL_QUIT) {
+                you_failed = false;
+            }
         }
 
-        // thread barriers
-        pthread_barrier_wait(&barrier);
-        pthread_barrier_wait(&barrier);
+
+        // thread barrier for input threads
+        pthread_barrier_wait(&barrier); // Releases the input threads to get input;
+        pthread_barrier_wait(&barrier); // Waits for the input threads to finish
+
+        updateCells(keyboard_args);
+        sleep_ms(50);
+
 
         // Display the rendered frame
         ui.display(*bmp);
@@ -453,3 +430,34 @@ int main(int argc, char ** argv) {
 }
 
 // for zachary
+
+
+
+/* "this should absolutely happen in parallel, but i'm okay proceeding in serial so that we can work on other things" - a nervous david who transcends temporal dimensions
+   __global__ void updateBMP(grid_t* gpu_g, bitmap* gpu_bmp) {
+   size_t bmp_index = blockIdx.x * blockDim.x + threadIdx.x;
+   int bmp_row = bmp_index / BMP_WIDTH;
+   int bmp_col = bmp_index % BMP_WIDTH;
+   bool alive = gpu_g->board[bmp_row / CELL_DIM][bmp_col / CELL_DIM];
+   rgb32 color = alive ? WHITE : BLACK;
+// gpu_bmp->set(bmp_row, bmp_col, color);
+}
+ */
+
+
+
+
+/* some shitty thing david made a while back. keeping it here for old TIME's sake
+   void print_grid(grid_t* g) {
+   for (int i = 0; i < GRID_WIDTH; i++) {
+   for (int j = 0; j < GRID_HEIGHT; j++) {
+   putchar(g->board[i][j] ? 'X' : ' ');
+   }
+   putchar('\n');
+   }
+   putchar('\n');
+   }
+ */
+
+
+
