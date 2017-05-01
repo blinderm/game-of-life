@@ -19,7 +19,7 @@ using namespace std;
 #define BMP_HEIGHT 600
 
 // Cell dimension
-#define CELL_DIM 5
+#define CELL_DIM 10
 
 // Grid size
 #define GRID_WIDTH (BMP_WIDTH/CELL_DIM)
@@ -292,15 +292,6 @@ void updateCells(void* params) {
 // Toggle cell's color 
 void toggleClickedCell(coord_t loc) {
 
-    // Indicate in the boolean grid that cell's state has been changed
-    //printf("before: %d \n", g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
-    
-    // if (g->board[loc.y][loc.x]) {
-    //     g->board[loc.y][loc.x] = false;
-    //     puts("set to false");
-    // } else {
-    //     g->board[loc.y][loc.x] = true;
-    // } 
     // color for cell to be set
     g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = max(1, g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
     rgb32 color = ageToColor(g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
@@ -338,11 +329,10 @@ void loadGrid(FILE * layout) {
 }
 
 
-int slope(rgb32
 
 rgb32 ageToColor(int age) {
 
-    return age == 0 ? BLACK : rgb32(0, max(255 - age, 0), 255);
+    return age == 0 ? BLACK : rgb32(0, max(255 - 50 * age, 0), 200);
 }
 
 /**
