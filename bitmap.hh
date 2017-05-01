@@ -16,6 +16,28 @@ struct rgb32 {
   rgb32() : red(0), green(0), blue(0) {}
   
   __host__ __device__ rgb32(uint8_t r, uint8_t g, uint8_t b) : red(r), green(g), blue(b) {}
+
+  rgb32 operator+(const rgb32& color) {
+      return rgb32(min(255, this->red + color.red), 
+              min(255, this->green + color.green), 
+              min(255, this->blue + color.blue));
+  }
+  rgb32 operator-(const rgb32& color) {
+      return rgb32(max(0, this->red - color.red), 
+              max(0, this->green - color.green), 
+              max(0, this->blue - color.blue));
+  }
+  rgb32 operator-(void) {
+      return rgb32(255 - this->red, 255 - this->green, 255 - this->blue);
+  }
+  rgb32 operator*(const int scalar) {
+      if (scalar < 0) {
+          return (-scalar) * -this;
+      }
+      return rgb32(min(255, scalar * this->red, 
+                  min(255, scalar * this->green), 
+                  min(255, scalar * this->blue));
+  }
 };
 
 class bitmap {

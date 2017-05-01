@@ -338,7 +338,10 @@ void loadGrid(FILE * layout) {
 }
 
 
+int slope(rgb32
+
 rgb32 ageToColor(int age) {
+
     return age == 0 ? BLACK : rgb32(0, max(255 - age, 0), 255);
 }
 
