@@ -39,7 +39,7 @@ static pthread_barrier_t barrier;
 
 // grid struct
 typedef struct grid {
-    bool board[(int) GRID_HEIGHT][(int) GRID_WIDTH];
+    int board[(int) GRID_HEIGHT][(int) GRID_WIDTH];
 } grid_t;
 
 
@@ -90,11 +90,13 @@ void updateCells(void* params);
 void displayBMP(void* params);
 
 // Toggle the cell's state, change the color accordingly
-void toggleCell(coord_t loc);
+void toggleClickedCell(coord_t loc);
 
 // Set up the grid with an existing layout specified by a file
 void loadGrid(FILE * layout);
 
+// Takes an age and returns a color
+rgb32 ageToColor(int age);
 
 //  Use Conway's update algorithm to decide whether or not to toggle cell 
 __global__ void life_or_death(grid_t* gpu_g) {
@@ -117,31 +119,19 @@ __global__ void life_or_death(grid_t* gpu_g) {
         }
     }
 
-    /*
-       if (alive_neighbors > 0) {
-       printf("high\n");
-       }
-     */
-
-    // if (col > row) printf(" akdfjn\n");
-
     if (alive_neighbors < 2 || alive_neighbors > 3) {
         // clear the cell
-        gpu_g->board[row][col] = false;
+        gpu_g->board[row][col] = 0;
     }
     else if (alive_neighbors == 2) {
         // do nothing!
+        if (gpu_g->board[row][col]) gpu_g->board[row][col] ++;
     }
     else { // (alive_neighbors == 3)
         // light up the cell
-        gpu_g->board[row][col] = true;
+        gpu_g->board[row][col] ++;
     }
 }
-
-
-
-
-
 
 // Get input from the keyboard and execute proper command 
 void* getKeyboardInput(void* params) {
@@ -201,8 +191,8 @@ void* getMouseInput(void* params) {
         if (args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
             //printf("left down!\n");
             // Only create one if the mouse button has been released
+            toggleClickedCell(args->loc);
             if(args->mouse_up) {
-                toggleCell(args->loc);
                 // Don't create another one until the mouse button is released
                 args->mouse_up = false;
             }
@@ -279,7 +269,7 @@ void updateCells(void* params) {
     // Loop over points in the bitmap to change color
     for(int row = 0; row < BMP_HEIGHT; row++){
         for(int col = 0; col < BMP_WIDTH; col++){
-            rgb32 color = g->board[row / CELL_DIM][col / CELL_DIM] ? WHITE : BLACK;
+            rgb32 color = ageToColor(g->board[row / CELL_DIM][col / CELL_DIM]);
             bmp->set(col, row, color);
         }
     }
@@ -300,9 +290,8 @@ void updateCells(void* params) {
 
 
 // Toggle cell's color 
-void toggleCell(coord_t loc) {
+void toggleClickedCell(coord_t loc) {
 
-    
     // Indicate in the boolean grid that cell's state has been changed
     //printf("before: %d \n", g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
     
@@ -313,8 +302,8 @@ void toggleCell(coord_t loc) {
     //     g->board[loc.y][loc.x] = true;
     // } 
     // color for cell to be set
-    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = true;
-    rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? WHITE : BLACK;
+    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = max(1, g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
+    rgb32 color = ageToColor(g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
     //printf("after: %d \n", g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
 
     // Find upper-left corner in boolean grid of cell
@@ -329,9 +318,6 @@ void toggleCell(coord_t loc) {
     }
 }
 
-
-
-
 void loadGrid(FILE * layout) {
     coord_t loc;
     loc.x = 0, loc.y = 0;
@@ -344,11 +330,16 @@ void loadGrid(FILE * layout) {
         }
         else {
             if (ch != ' ') {
-                toggleCell(loc);
+                toggleClickedCell(loc);
             }
             loc.x ++;
         }
     }
+}
+
+
+rgb32 ageToColor(int age) {
+    return age == 0 ? BLACK : rgb32(0, max(255 - age, 0), 255);
 }
 
 /**
@@ -364,7 +355,7 @@ int main(int argc, char ** argv) {
     g = (grid_t*) malloc(sizeof(grid_t));
     for (int col = 0; col < GRID_WIDTH; col++) {
         for (int row = 0; row < GRID_HEIGHT; row++) {
-            g->board[row][col] = false;
+            g->board[row][col] = 0;
         }
     }
 
