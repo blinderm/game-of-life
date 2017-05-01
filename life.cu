@@ -53,7 +53,6 @@ bool you_failed = true;
 typedef struct mouse_args {
     coord_t loc;
     uint32_t mouse_state;
-    bool mouse_up;
     SDL_Event* event;
 } mouse_args_t;
 
@@ -211,19 +210,10 @@ void* getMouseInput(void* params) {
         args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
 
         if (args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-            // Only create one if the mouse button has been released
             toggleCell(args->loc);
-            if(args->mouse_up) {
-                // Don't create another one until the mouse button is released
-                args->mouse_up = false;
-            }
-        } 
-        else {
-            // The mouse button was released
-            args->mouse_up = true;
         }
 
-        pthread_barrier_wait(&barrier); // Releases the main function to run updates
+            pthread_barrier_wait(&barrier); // Releases the main function to run updates
     }
 
     return NULL;
@@ -354,7 +344,6 @@ int main(int argc, char ** argv) {
     // struct of arguments for mouse function
     mouse_args_t* mouse_args = (mouse_args_t*) malloc(sizeof(mouse_args_t));
     mouse_args->mouse_state = SDL_GetMouseState(&(mouse_args->loc.x), &(mouse_args->loc.y));
-    mouse_args->mouse_up = true;
     mouse_args->event = &event;
 
     // struct of arguments for keyboard function
