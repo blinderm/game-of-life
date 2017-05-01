@@ -19,7 +19,7 @@ using namespace std;
 #define BMP_HEIGHT 600
 
 // Cell dimension
-#define CELL_DIM 10
+#define CELL_DIM 5
 
 // Grid size
 #define GRID_WIDTH (BMP_WIDTH/CELL_DIM)
@@ -154,7 +154,7 @@ void* getKeyboardInput(void* params) {
 
         // If the "c" key is pressed, clear the board
         if(args->keyboard_state[SDL_SCANCODE_C]) {
-            puts("Cleared!\n");
+            //puts("Cleared!\n");
 
             // Loop over points in the bitmap to change color
             for (int x = 0; x < BMP_WIDTH; x++) {
@@ -167,13 +167,13 @@ void* getKeyboardInput(void* params) {
 
         // If the "p" key is pressed, toggle the pause-ness the simulation
         if(args->keyboard_state[SDL_SCANCODE_P]) {
-            puts("Pause!\n");
+            //puts("Pause!\n");
             paused = !(paused);
         }
 
         // If the "q" key is pressed, quit the simulation
         if(args->keyboard_state[SDL_SCANCODE_Q]) {
-            puts("quit!\n");
+            //puts("quit!\n");
             you_failed = false;
         }
         
@@ -304,7 +304,7 @@ void toggleCell(coord_t loc) {
 
     
     // Indicate in the boolean grid that cell's state has been changed
-    printf("before: %d \n", g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
+    //printf("before: %d \n", g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
     
     // if (g->board[loc.y][loc.x]) {
     //     g->board[loc.y][loc.x] = false;
@@ -315,7 +315,7 @@ void toggleCell(coord_t loc) {
     // color for cell to be set
     g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = true;
     rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? WHITE : BLACK;
-    printf("after: %d \n", g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
+    //printf("after: %d \n", g->board[loc.y/CELL_DIM][loc.x/CELL_DIM]);
 
     // Find upper-left corner in boolean grid of cell
     int x_start = (loc.x / CELL_DIM) * CELL_DIM;
@@ -420,7 +420,7 @@ int main(int argc, char ** argv) {
 
         if (!paused) {
           updateCells(keyboard_args);
-          sleep_ms(50);
+          sleep_ms(25);
         }
 
 
