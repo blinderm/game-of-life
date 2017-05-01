@@ -46,8 +46,7 @@ public:
   
   // Set the color at a given location
   __host__ __device__ void set(int x, int y, rgb32 color) {
-    // Instead of failing assertions for out-of-bounds pixels, just ignore them
-    if(x < 0 || x >= _width || y < 0 || y >= _height) return;
+    assert(!(x < 0 || x >= _width || y < 0 || y >= _height)) ;
     _data[y*_width+x] = color;
   }
   
