@@ -19,7 +19,7 @@ using namespace std;
 #define BMP_HEIGHT 600
 
 // Cell dimension
-#define CELL_DIM 5
+#define CELL_DIM 10 
 
 // Grid size
 #define GRID_WIDTH (BMP_WIDTH/CELL_DIM)
@@ -74,7 +74,6 @@ grid_t* g;
 // Create a GUI window
 gui ui("Conway's Game of Life", BMP_WIDTH, BMP_HEIGHT);
 
-
 // Get input from the keyboard and execute proper command 
 void* getKeyboardInput(void* params);
 
@@ -106,10 +105,9 @@ __global__ void life_or_death(grid_t* gpu_g) {
     int top = max(0, row - 1);
     int bottom = min(GRID_HEIGHT - 1, row + 1);
 
-    int i,j;
     int alive_neighbors = 0;
-    for(j = left; j <= right; j++) {
-        for(i = top; i <= bottom; i++) {
+    for(int j = left; j <= right; j++) {
+        for(int i = top; i <= bottom; i++) {
             alive_neighbors += (!(col == j && row == i) && gpu_g->board[i][j]) ? 1 : 0;
         }
     }
