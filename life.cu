@@ -1,6 +1,7 @@
 #include "life.hh"
-// use Conway's update algorithm to decide whether or not to toggle cell 
-__global__ void life_or_death(grid* gpu_g) {
+
+// count neighbors
+__global__ void count_neighbors(grid* gpu_g, grid* gpu_neighbors) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
 
@@ -12,24 +13,37 @@ __global__ void life_or_death(grid* gpu_g) {
     int top = max(0, row - 1);
     int bottom = min(GRID_HEIGHT - 1, row + 1);
 
-    int alive_neighbors = 0;
+    gpu_neighbors->board[row][col] = 0;
+
     for(int j = left; j <= right; j++) {
         for(int i = top; i <= bottom; i++) {
-            alive_neighbors += (!(col == j && row == i) && gpu_g->board[i][j]) ? 1 : 0;
+            gpu_neighbors->board[row][col] += (!(col == j && row == i) && gpu_g->board[i][j]) ? 1 : 0;
         }
     }
 
-    if (alive_neighbors < 2 || alive_neighbors > 3) {
-        // clear the cell
-        gpu_g->board[row][col] = 0;
-    }
-    else if (alive_neighbors == 2) {
-        // do nothing!
-        if (gpu_g->board[row][col]) gpu_g->board[row][col] ++;
-    }
-    else { // (alive_neighbors == 3)
-        // light up the cell
-        gpu_g->board[row][col] ++;
+}
+
+// use Conway's update algorithm to decide whether or not to toggle cell 
+__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors) {
+
+    size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
+
+    // establish boundaries for checking neighbors
+    int row = index / GRID_WIDTH;
+    int col = index % GRID_WIDTH;
+
+    switch(gpu_neighbors->board[row][col]) {
+        case 2:
+            if(gpu_g->board[row][col]) {
+                gpu_g->board[row][col] ++;
+            }
+            break;
+        case 3:
+            gpu_g->board[row][col]++;
+            break;
+        default:
+            gpu_g->board[row][col] = 0;
+            break;
     }
 }
 
@@ -149,6 +163,13 @@ void update_cells() {
         exit(2);
     }
 
+    // allocate space for neighbors
+    grid* gpu_neighbors;
+    if (cudaMalloc(&gpu_neighbors, sizeof(grid)) != cudaSuccess) {
+        fprintf(stderr, "Failed to allocate grid on GPU\n");
+        exit(2);
+    }
+
     // copy the CPU grid to the GPU grid
     if (cudaMemcpy(gpu_g, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid to the GPU\n");
@@ -159,10 +180,18 @@ void update_cells() {
         fprintf(stderr, "Failed to copy bitmap to the GPU\n");
     }
 
+    // copy the grid
+    if (cudaMemcpy(gpu_neighbors, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy neighbors grid to the GPU\n");
+    }
+
+
     // number of block to run (rounding up to include all threads)
     size_t grid_blocks = (GRID_WIDTH*GRID_HEIGHT + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
-    life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g);
+    count_neighbors<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
+    cudaDeviceSynchronize();
+    life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
     cudaDeviceSynchronize();
 
     // copy the GPU grid back to the CPU
@@ -276,7 +305,7 @@ int main(int argc, char ** argv) {
     grid grd(0);
     g = &grd;
 
-    if (argc > 1) {
+       if (argc > 1) {
         FILE * fp;
         fp = fopen(argv[1], "r");
         load_grid(fp);
