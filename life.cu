@@ -226,11 +226,42 @@ void load_grid(FILE * layout) {
 }
 
 
+rgb_f32 interpolate_colors(int current_age, int old_age, int new_age, rgb_f32 old_color,
+    rgb_f32 new_color) {
+    rgb_f32 slope = (new_color - old_color) * (1. / (float) (new_age- old_age));
+    rgb_f32 current_color = old_color + slope * current_age;
+
+    return current_color;
+}
 
 rgb32 age_to_color(int age) {
+    // dead cells are black, which is different behavior from living cells
+    if (age == 0) {
+      return BLACK;
+    }
 
-    return age == 0 ? BLACK : rgb32(0, max(255 - 50 * age, 0), 200);
+    // living cells "age" in the following way:
+    // white -> yellow -> red -> dark red
+    int transition_time = 7;
+    rgb_f32 colors[5] = {
+      rgb_f32(255,255,255),
+      rgb_f32(255,255,0),
+      rgb_f32(255,0  ,0),
+      rgb_f32(0 ,0  ,255),
+      rgb_f32(0 ,0  ,255),
+    };
+
+    int interp = min(3, age / transition_time);
+    rgb_f32 color = interpolate_colors(
+        age, 
+        interp * transition_time, 
+        (interp + 1) * transition_time,
+        colors[interp],
+        colors[interp+1]);
+
+    return rgb32(color);
 }
+
 
 /**
  * Entry point for the program
