@@ -7,12 +7,9 @@ all: life
 clean:
 	@rm -f life
 
-life: life.o scheduler.o
-	$(CC) $(CFLAGS) -o life life.o scheduler.o 
+life: life.o 
+	$(CC) $(CFLAGS) -o life life.o 
 
-life.o: life.cu
+life.o: life.cu life.hh
 	$(CC) $(CFLAGS) -c life.cu
-
-scheduler.o: scheduler.cc scheduler.hh
-	$(CC) $(CFLAGS) -c scheduler.cc
 
