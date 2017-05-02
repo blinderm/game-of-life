@@ -20,55 +20,57 @@
 
 using namespace std;
 
-// Screen size
+// screen size
 #define BMP_WIDTH 800
 #define BMP_HEIGHT 600
 
-// Cell dimension
+// cell dimension
 #define CELL_DIM 10
 
-// Grid size
+// grid size
 #define GRID_WIDTH (BMP_WIDTH/CELL_DIM)
 #define GRID_HEIGHT (BMP_HEIGHT/CELL_DIM)
 
-// Threads per block
+// threads per block
 #define THREADS_PER_BLOCK 64
 
-// Colors!
+// colors!
 #define WHITE rgb32(255.,255.,255.)
 #define BLACK rgb32(0.,0.,0.)
 
-
+// update delay
+#define DELAY 25
 
 // barrier for threads
 static pthread_barrier_t barrier;
 
 // grid struct
 typedef struct grid {
-        bool board[(int) GRID_HEIGHT][(int) GRID_WIDTH];
+    bool board[(int) GRID_HEIGHT][(int) GRID_WIDTH];
 } grid_t;
 
 
 // coordinate struct
 typedef struct coord {
-        int x;
-            int y;
+    int x;
+    int y;
 } coord_t;
 
-// for old times' sake
-bool you_failed = true;
+bool running = true;
 
 // mouse function parameter struct
 typedef struct mouse_args {
-        coord_t loc;
-            uint32_t mouse_state;
-                bool mouse_up;
+    coord_t loc;
+    uint32_t mouse_state;
+    bool mouse_up;
+    SDL_Event* event;
 } mouse_args_t;
 
 // keyboard function parameter struct
 typedef struct keyboard_args {
-        coord_t loc;
-            const uint8_t* keyboard_state;
+    coord_t loc;
+    const uint8_t* keyboard_state;
+    SDL_Event* event;
 } keyboard_args_t;
 
 bool paused = true;
@@ -84,22 +86,19 @@ gui ui("Conway's Game of Life", BMP_WIDTH, BMP_HEIGHT);
 
 
 // Get input from the keyboard and execute proper command 
-void* getKeyboardInput(void* params);
+void* get_keyboard_input(void* params);
 
 // Get input from the mouse and toggle the appropriate cell's state/color
-void* getMouseInput(void* params);
+void* get_mouse_input(void* params);
 
 // Update each cell in order to advance the simulation
-void updateCells(void* params);
-
-// display the screen 
-void displayBMP(void* params);
+void update_cells(void* params);
 
 // Toggle the cell's state, change the color accordingly
-void toggleCell(coord_t loc);
+void let_there_be_light(coord_t loc);
 
 // Set up the grid with an existing layout specified by a file
-void loadGrid(FILE * layout);
+void load_grid(FILE * layout);
 
 
 

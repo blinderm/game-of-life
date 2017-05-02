@@ -1,12 +1,12 @@
 #include "life.hh"
 
 
-//  Use Conway's update algorithm to decide whether or not to toggle cell 
+// use Conway's update algorithm to decide whether or not to toggle cell 
 __global__ void life_or_death(grid_t* gpu_g) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
 
-    // first thing's first: establish boundaries
+    // establish boundaries for checking neighbors
     int row = index / GRID_WIDTH;
     int col = index % GRID_WIDTH;
     int left = max(0, col - 1);
@@ -34,19 +34,20 @@ __global__ void life_or_death(grid_t* gpu_g) {
     }
 }
 
-// Get input from the keyboard and execute proper command 
+// get input from the keyboard and execute proper command 
 // UPDATE: currently, this only works as CTRL-P, CTRL-C, and CTRL-Q
-void* getKeyboardInput(void* params) {
+void* get_keyboard_input(void* params) {
 
     bool clear = false;
     bool pause = false;
     bool quit = false;
 
     keyboard_args_t* args = (keyboard_args_t*) params;
-    while (you_failed) {
-        pthread_barrier_wait(&barrier); // Waits for the Poll Event in main
+    while (running) {
+        // waits for the Poll Event in main
+        pthread_barrier_wait(&barrier);
 
-        // If the "c" key is pressed, clear the board
+        // if the "c" key is pressed, clear the board
         switch (args->event->type) {
             case SDL_KEYDOWN:
                 switch (args->event->key.keysym.scancode) {
@@ -86,7 +87,7 @@ void* getKeyboardInput(void* params) {
                         break;
                     case SDL_SCANCODE_Q:
                         if (quit) {
-                            you_failed = false;
+                            running = false;
                             quit = false;
                         }
                         break;
@@ -97,30 +98,32 @@ void* getKeyboardInput(void* params) {
             default:
                 break;
         }
-
-        pthread_barrier_wait(&barrier); // Releases the main function to run updates
+        // releases the main function to run updates
+        pthread_barrier_wait(&barrier);
     }
 
     return NULL;
 }
 
 
-// Get input from the mouse and toggle the appropriate cell's state/color
-void* getMouseInput(void* params) {
+// get input from the mouse and toggle the appropriate cell's state/color
+void* get_mouse_input(void* params) {
 
     mouse_args_t* args = (mouse_args_t*) params;
-    while(you_failed) {
-        pthread_barrier_wait(&barrier); // Waits for the Poll Event in main
+    while(running) {
+        
+        // waits for the Poll Event in main
+        pthread_barrier_wait(&barrier); 
 
-        // If the left mouse button is pressed, get position and toggle cell
+        // if the left mouse button is pressed, get position and toggle cell
         // TO DO: make this thing toggle only once per click/release
         args->mouse_state = SDL_GetMouseState(&(args->loc.x), &(args->loc.y));
 
         if (args->mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-            toggleCell(args->loc);
+            let_there_be_light(args->loc);
         }
 
-            pthread_barrier_wait(&barrier); // Releases the main function to run updates
+        pthread_barrier_wait(&barrier); // releases the main function to run updates
     }
 
     return NULL;
@@ -128,8 +131,9 @@ void* getMouseInput(void* params) {
 
 
 
-// Update each cell in order to advance the simulation
-void updateCells(void* params) {
+// update each cell in order to advance the simulation
+void update_cells(void* params) {
+    
     // allocate space for GPU grid
     grid_t* gpu_g;
     if (cudaMalloc(&gpu_g, sizeof(grid_t)) != cudaSuccess) {
@@ -170,7 +174,7 @@ void updateCells(void* params) {
         fprintf(stderr, "Failed to copy bitmap from the GPU\n");
     }
 
-    // Loop over points in the bitmap to change color
+    // loop over points in the bitmap to change color
     for(int row = 0; row < BMP_HEIGHT; row++){
         for(int col = 0; col < BMP_WIDTH; col++){
             rgb32 color = g->board[row / CELL_DIM][col / CELL_DIM] ? WHITE : BLACK;
@@ -183,11 +187,10 @@ void updateCells(void* params) {
     cudaFree(gpu_bmp);
 }
 
-// Toggle cell's color 
-void toggleCell(coord_t loc) {
+// 
+void let_there_be_light(coord_t loc) {
 
-    // Indicate in the boolean grid that cell's state has been changed
-    // color for cell to be set
+    // ndicate in the boolean grid that cell's state has been changed
     g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = true;
     rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? WHITE : BLACK;
 
@@ -203,7 +206,7 @@ void toggleCell(coord_t loc) {
     }
 }
 
-void loadGrid(FILE * layout) {
+void load_grid(FILE * layout) {
     coord_t loc;
     loc.x = 0, loc.y = 0;
     char ch;
@@ -215,7 +218,7 @@ void loadGrid(FILE * layout) {
         }
         else {
             if (ch != ' ') {
-                toggleCell(loc);
+                let_there_be_light(loc);
             }
             loc.x ++;
         }
@@ -242,7 +245,7 @@ int main(int argc, char ** argv) {
     if (argc > 1) {
         FILE * fp;
         fp = fopen(argv[1], "r");
-        loadGrid(fp);
+        load_grid(fp);
         fclose(fp);
     }
 
@@ -260,42 +263,38 @@ int main(int argc, char ** argv) {
 
     ui.display(*bmp);
 
-    // Initialize barrier
+    // initialize barrier
     pthread_barrier_init(&barrier, NULL, 3);
 
-    // Set up threads
+    // set up threads
     pthread_t mouse_thread, keyboard_thread;
 
-    if (pthread_create(&mouse_thread, NULL, getMouseInput, (void*) mouse_args)) {
+    if (pthread_create(&mouse_thread, NULL, get_mouse_input, (void*) mouse_args)) {
         perror("error in pthread_create.\n");
         exit(2);
     }
-    if (pthread_create(&keyboard_thread, NULL, getKeyboardInput, (void*) keyboard_args)) {
+    if (pthread_create(&keyboard_thread, NULL, get_keyboard_input, (void*) keyboard_args)) {
         perror("error in pthread_create.\n");
         exit(2);
     }
 
-    // Loop until we get a quit event
-    while(you_failed) {
-        // Process events
+    // loop until we get a quit event
+    while(running) {
 
-        while(SDL_PollEvent(&event) == 1) {
-            // If the event is a quit event, then leave the loop
-            if(event.type == SDL_QUIT) {
-                you_failed = false;
-            }
-        }
+        // process events
+        while(SDL_PollEvent(&event) == 1); 
 
-        // thread barrier for input threads
-        pthread_barrier_wait(&barrier); // Releases the input threads to get input;
-        pthread_barrier_wait(&barrier); // Waits for the input threads to finish
+        // releases the input threads to get input;
+        pthread_barrier_wait(&barrier); 
+        // waits for the input threads to finish
+        pthread_barrier_wait(&barrier); 
 
         if (!paused) {
-            updateCells(keyboard_args);
-            sleep_ms(25);
+            update_cells(keyboard_args);
+            sleep_ms(DELAY);
         }
 
-        // Display the rendered frame
+        // display the rendered frame
         ui.display(*bmp);
     }
 
