@@ -2,7 +2,7 @@
 
 
 // use Conway's update algorithm to decide whether or not to toggle cell 
-__global__ void life_or_death(grid_t* gpu_g) {
+__global__ void life_or_death(grid* gpu_g) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
 
@@ -42,7 +42,7 @@ void* get_keyboard_input(void* params) {
     bool pause = false;
     bool quit = false;
 
-    keyboard_args_t* args = (keyboard_args_t*) params;
+    input_args* args = (input_args*) params;
     while (running) {
         // waits for the Poll Event in main
         pthread_barrier_wait(&barrier);
@@ -73,7 +73,7 @@ void* get_keyboard_input(void* params) {
                                     bmp->set(x, y, BLACK);
                                 }
                             }
-                            memset(g->board, 0, sizeof(grid_t));
+                            memset(g->board, 0, sizeof(grid));
                             puts("Cleared");
                             clear = false;
                         }
@@ -109,7 +109,7 @@ void* get_keyboard_input(void* params) {
 // get input from the mouse and toggle the appropriate cell's state/color
 void* get_mouse_input(void* params) {
 
-    mouse_args_t* args = (mouse_args_t*) params;
+    input_args* args = (input_args*) params;
     while(running) {
         
         // waits for the Poll Event in main
@@ -132,11 +132,11 @@ void* get_mouse_input(void* params) {
 
 
 // update each cell in order to advance the simulation
-void update_cells(void* params) {
+void update_cells() {
     
     // allocate space for GPU grid
-    grid_t* gpu_g;
-    if (cudaMalloc(&gpu_g, sizeof(grid_t)) != cudaSuccess) {
+    grid* gpu_g;
+    if (cudaMalloc(&gpu_g, sizeof(grid)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate grid on GPU\n");
         exit(2);
     }
@@ -149,7 +149,7 @@ void update_cells(void* params) {
     }
 
     // copy the CPU grid to the GPU grid
-    if (cudaMemcpy(gpu_g, g, sizeof(grid_t), cudaMemcpyHostToDevice) != cudaSuccess) {
+    if (cudaMemcpy(gpu_g, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid to the GPU\n");
     }
 
@@ -165,7 +165,7 @@ void update_cells(void* params) {
     cudaDeviceSynchronize();
 
     // copy the GPU grid back to the CPU
-    if (cudaMemcpy(g, gpu_g, sizeof(grid_t), cudaMemcpyDeviceToHost) != cudaSuccess) {
+    if (cudaMemcpy(g, gpu_g, sizeof(grid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid from the GPU\n");
     }
 
@@ -188,9 +188,9 @@ void update_cells(void* params) {
 }
 
 // 
-void let_there_be_light(coord_t loc) {
+void let_there_be_light(coord loc) {
 
-    // ndicate in the boolean grid that cell's state has been changed
+    // indicate in the boolean grid that cell's state has been changed
     g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = true;
     rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? WHITE : BLACK;
 
@@ -207,7 +207,7 @@ void let_there_be_light(coord_t loc) {
 }
 
 void load_grid(FILE * layout) {
-    coord_t loc;
+    coord loc;
     loc.x = 0, loc.y = 0;
     char ch;
 
@@ -235,12 +235,8 @@ int main(int argc, char ** argv) {
     bmp = &bits;
 
     // Create the grid
-    g = (grid_t*) malloc(sizeof(grid_t));
-    for (int col = 0; col < GRID_WIDTH; col++) {
-        for (int row = 0; row < GRID_HEIGHT; row++) {
-            g->board[row][col] = false;
-        }
-    }
+    grid grd(0);
+    g = &grd;
 
     if (argc > 1) {
         FILE * fp;
@@ -252,14 +248,8 @@ int main(int argc, char ** argv) {
     SDL_Event event;
 
     // struct of arguments for mouse function
-    mouse_args_t* mouse_args = (mouse_args_t*) malloc(sizeof(mouse_args_t));
-    mouse_args->mouse_state = SDL_GetMouseState(&(mouse_args->loc.x), &(mouse_args->loc.y));
-    mouse_args->event = &event;
-
-    // struct of arguments for keyboard function
-    keyboard_args_t* keyboard_args = (keyboard_args_t*) malloc(sizeof(keyboard_args_t));
-    keyboard_args->keyboard_state = SDL_GetKeyboardState(NULL);
-    keyboard_args->event = &event;
+    input_args mouse_args(&event);
+    input_args keyboard_args(&event);
 
     ui.display(*bmp);
 
@@ -269,11 +259,11 @@ int main(int argc, char ** argv) {
     // set up threads
     pthread_t mouse_thread, keyboard_thread;
 
-    if (pthread_create(&mouse_thread, NULL, get_mouse_input, (void*) mouse_args)) {
+    if (pthread_create(&mouse_thread, NULL, get_mouse_input, (void*) (&mouse_args))) {
         perror("error in pthread_create.\n");
         exit(2);
     }
-    if (pthread_create(&keyboard_thread, NULL, get_keyboard_input, (void*) keyboard_args)) {
+    if (pthread_create(&keyboard_thread, NULL, get_keyboard_input, (void*) (&keyboard_args))) {
         perror("error in pthread_create.\n");
         exit(2);
     }
@@ -290,7 +280,7 @@ int main(int argc, char ** argv) {
         pthread_barrier_wait(&barrier); 
 
         if (!paused) {
-            update_cells(keyboard_args);
+            update_cells();
             sleep_ms(DELAY);
         }
 
