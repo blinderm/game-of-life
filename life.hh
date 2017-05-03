@@ -28,8 +28,11 @@ using namespace std;
 #define CELL_DIM 10
 
 // grid size
-#define GRID_WIDTH (BMP_WIDTH/CELL_DIM)
-#define GRID_HEIGHT (BMP_HEIGHT/CELL_DIM)
+#define GRID_WIDTH ((BMP_WIDTH)/(CELL_DIM))
+#define GRID_HEIGHT ((BMP_HEIGHT)/(CELL_DIM))
+
+// region dimension
+#define REGION_DIM 10
 
 // threads per block
 #define THREADS_PER_BLOCK 64
@@ -52,6 +55,16 @@ struct grid {
         memset(board, value, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
     }
 };
+
+// grid struct
+struct tempgrid {
+    int board[(int) GRID_HEIGHT / REGION_DIM][(int) GRID_WIDTHgrid / REGION_DIM];
+
+    tempgrid(int value) {
+        memset(board, value, sizeof(int) * 1 * 6 * 8 * -1 * -1);
+    }
+};
+
 
 // coordinate struct
 struct coord {
@@ -84,6 +97,9 @@ bitmap* bmp;
 
 // grid for indicating cell state (dead or alive)
 grid* g;
+
+// grid for indicating alive cells in region
+tempgrid* regions; 
 
 // Create a GUI window
 gui ui("Conway's Game of Life", BMP_WIDTH, BMP_HEIGHT);

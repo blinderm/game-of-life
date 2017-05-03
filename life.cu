@@ -24,7 +24,7 @@ __global__ void count_neighbors(grid* gpu_g, grid* gpu_neighbors) {
 }
 
 // use Conway's update algorithm to decide whether or not to toggle cell 
-__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors) {
+__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, tempgrid* gpu_regions) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
 
@@ -32,19 +32,29 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors) {
     int row = index / GRID_WIDTH;
     int col = index % GRID_WIDTH;
 
-    switch(gpu_neighbors->board[row][col]) {
-        case 2:
-            if(gpu_g->board[row][col]) {
-                gpu_g->board[row][col] ++;
-            }
-            break;
-        case 3:
-            gpu_g->board[row][col]++;
-            break;
-        default:
-            gpu_g->board[row][col] = 0;
-            break;
+    if (gpu_regions->board[row / REGION_DIM][col / REGION_DIM] > 0) {
+        switch(gpu_neighbors->board[row][col]) {
+            case 2: // alive cell stays alive; dead cell stays dead
+                if(gpu_g->board[row][col] > 0) { // alive cell stays alive
+                    gpu_g->board[row][col]++;
+                }
+                break;
+            case 3: // alive cell stays alive; dead cell comes alive
+                if (gpu_g->board[row][col] == 0) { // dead cell comes alive
+                    gpu_regions->board[row / REGION_DIM][col / REGION_DIM]++;
+                }
+                gpu_g->board[row][col]++;
+                break;
+            default: // alive cell dies; dead cell stays dead
+                if (gpu_g->board[row][col] > 0) { // alive cell dies
+                    gpu_regions->board[row / REGION_DIM][col / REGION_DIM]--;
+                }
+                gpu_g->board[row][col] = 0;
+                break;
+        }
+
     }
+
 }
 
 
@@ -170,6 +180,13 @@ void update_cells() {
         exit(2);
     }
 
+    // allocate space for neighbors
+    tempgrid* regions;
+    if (cudaMalloc(&regions, sizeof(tempgrid)) != cudaSuccess) {
+        fprintf(stderr, "Failed to allocate regions grid on GPU\n");
+        exit(2);
+    }
+
     // copy the CPU grid to the GPU grid
     if (cudaMemcpy(gpu_g, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid to the GPU\n");
@@ -180,18 +197,22 @@ void update_cells() {
         fprintf(stderr, "Failed to copy bitmap to the GPU\n");
     }
 
-    // copy the grid
+    // copy the CPU neighbors grid to the GPU neighbors grid
     if (cudaMemcpy(gpu_neighbors, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy neighbors grid to the GPU\n");
     }
 
+    // copy the GPU regions grid to the GPU regions grid
+    if (cudaMemcpy(gpu_regions, regions, sizeof(tempgrid), cudaMemcpyHostToDevice) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy regions grid to the GPU\n");
+    }
 
     // number of block to run (rounding up to include all threads)
     size_t grid_blocks = (GRID_WIDTH*GRID_HEIGHT + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
     count_neighbors<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
     cudaDeviceSynchronize();
-    life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
+    life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors, gpu_regions);
     cudaDeviceSynchronize();
 
     // copy the GPU grid back to the CPU
@@ -202,6 +223,11 @@ void update_cells() {
     // copy the CPU bitmap to the GPU bitmap
     if (cudaMemcpy(bmp, gpu_bmp, sizeof(bitmap), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy bitmap from the GPU\n");
+    }
+
+    // copy the CPU regions grid to the GPU regions grid
+    if (cudaMemcpy(regions, gpu_regions, sizeof(tempgrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy regions grid from the GPU\n");
     }
 
     // loop over points in the bitmap to change color
@@ -215,13 +241,15 @@ void update_cells() {
     // free everything we malloc'ed
     cudaFree(gpu_g);
     cudaFree(gpu_bmp);
+    cudaFree(gpu_regions);
 }
 
 // 
 void let_there_be_light(coord loc) {
     // indicate in the boolean grid that cell's state has been changed
-    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = true;
+    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = 0;
     rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? WHITE : BLACK;
+    regions->board[(loc.y/CELL_DIM)/REGION_DIM][(loc.x/CELL_DIM)/REGION_DIM]++;
 
     // Find upper-left corner in boolean grid of cell
     int x_start = (loc.x / CELL_DIM) * CELL_DIM;
@@ -256,7 +284,7 @@ void load_grid(FILE * layout) {
 
 
 rgb_f32 interpolate_colors(int current_age, int old_age, int new_age, rgb_f32 old_color,
-    rgb_f32 new_color) {
+        rgb_f32 new_color) {
     rgb_f32 slope = (new_color - old_color) * (1. / (float) (new_age- old_age));
     rgb_f32 current_color = old_color + slope * current_age;
 
@@ -266,27 +294,27 @@ rgb_f32 interpolate_colors(int current_age, int old_age, int new_age, rgb_f32 ol
 rgb32 age_to_color(int age) {
     // dead cells are black, which is different behavior from living cells
     if (age == 0) {
-      return BLACK;
+        return BLACK;
     }
 
     // living cells "age" in the following way:
     // white -> yellow -> red -> dark red
     int transition_time = 7;
     rgb_f32 colors[5] = {
-      rgb_f32(255,255,255),
-      rgb_f32(255,255,0),
-      rgb_f32(255,0  ,0),
-      rgb_f32(0 ,0  ,255),
-      rgb_f32(0 ,0  ,255),
+        rgb_f32(255,255,255),
+        rgb_f32(255,255,0),
+        rgb_f32(255,0  ,0),
+        rgb_f32(0 ,0  ,255),
+        rgb_f32(0 ,0  ,255),
     };
 
     int interp = min(3, age / transition_time);
     rgb_f32 color = interpolate_colors(
-        age, 
-        interp * transition_time, 
-        (interp + 1) * transition_time,
-        colors[interp],
-        colors[interp+1]);
+            age, 
+            interp * transition_time, 
+            (interp + 1) * transition_time,
+            colors[interp],
+            colors[interp+1]);
 
     return rgb32(color);
 }
@@ -305,7 +333,7 @@ int main(int argc, char ** argv) {
     grid grd(0);
     g = &grd;
 
-       if (argc > 1) {
+    if (argc > 1) {
         FILE * fp;
         fp = fopen(argv[1], "r");
         load_grid(fp);
