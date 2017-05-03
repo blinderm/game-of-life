@@ -41,6 +41,7 @@ void* get_keyboard_input(void* params) {
     bool clear = false;
     bool pause = false;
     bool quit = false;
+    bool glider = false;
 
     input_args* args = (input_args*) params;
     while (running) {
@@ -53,6 +54,9 @@ void* get_keyboard_input(void* params) {
                 switch (args->event->key.keysym.scancode) {
                     case SDL_SCANCODE_C:
                         clear = true;
+                        break;
+                    case SDL_SCANCODE_G:
+                        glider = true;
                         break;
                     case SDL_SCANCODE_P:
                         pause = true;
@@ -68,14 +72,15 @@ void* get_keyboard_input(void* params) {
                 switch (args->event->key.keysym.scancode) {
                     case SDL_SCANCODE_C:
                         if (clear) {
-                            for (int x = 0; x < BMP_WIDTH; x++) {
-                                for (int y = 0; y < BMP_HEIGHT; y++) {
-                                    bmp->set(x, y, BLACK);
-                                }
-                            }
-                            memset(g->board, 0, sizeof(grid));
+                            bmp->fill(BLACK);
+                            g->fill(0);
                             puts("Cleared");
                             clear = false;
+                        }
+                        break;
+                    case SDL_SCANCODE_G:
+                        if (glider) {
+
                         }
                         break;
                     case SDL_SCANCODE_P:

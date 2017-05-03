@@ -51,6 +51,10 @@ struct grid {
     grid(int value) {
         memset(board, value, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
     }
+
+    void fill(int value) {
+      memset(board, value, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
+    }
 };
 
 // coordinate struct
