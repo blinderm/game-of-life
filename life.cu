@@ -1,6 +1,5 @@
 #include "life.hh"
 
-
 // use Conway's update algorithm to decide whether or not to toggle cell 
 __global__ void life_or_death(grid* gpu_g) {
 
@@ -37,7 +36,6 @@ __global__ void life_or_death(grid* gpu_g) {
 // get input from the keyboard and execute proper command 
 // UPDATE: currently, this only works as CTRL-P, CTRL-C, and CTRL-Q
 void* get_keyboard_input(void* params) {
-
     bool clear = false;
     bool pause = false;
     bool quit = false;
@@ -81,16 +79,15 @@ void* get_keyboard_input(void* params) {
                     case SDL_SCANCODE_G:
                         if (glider) {
                             add_glider(args->loc);
-                            printf("Glider to (%d, %d)\n", args->loc.x, args->loc.y);
-
+                            puts("Glider");
+                            glider = false;
                         }
-                        glider = false;
                         break;
                     case SDL_SCANCODE_P:
                         if (pause) {
                             paused = !(paused);
-                            pause = false;
                             puts("Pause toggle!");
+                            pause = false;
                         }
                         break;
                     case SDL_SCANCODE_Q:
@@ -109,14 +106,11 @@ void* get_keyboard_input(void* params) {
         // releases the main function to run updates
         pthread_barrier_wait(&barrier);
     }
-
     return NULL;
 }
 
-
 // get input from the mouse and toggle the appropriate cell's state/color
 void* get_mouse_input(void* params) {
-
     input_args* args = (input_args*) params;
     while(running) {
         
@@ -134,15 +128,11 @@ void* get_mouse_input(void* params) {
             darkness_in_the_deep(args->loc);
         }
 
-
-
         pthread_barrier_wait(&barrier); // releases the main function to run updates
     }
 
     return NULL;
 }
-
-
 
 // update each cell in order to advance the simulation
 void update_cells() {
@@ -200,9 +190,7 @@ void update_cells() {
     cudaFree(gpu_bmp);
 }
 
-// 
 void fill_cell_with(coord loc, rgb32 color) {
-
     // indicate in the boolean grid that cell's state has been changed
     g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = true;
 
@@ -225,6 +213,7 @@ void let_there_be_light(coord loc) {
 void darkness_in_the_deep(coord loc) {
     fill_cell_with(loc, BLACK);
 }
+
 void load_grid(FILE * layout) {
     coord loc;
     loc.x = 0, loc.y = 0;
@@ -326,7 +315,6 @@ void clear_pixels() {
 }
 
 void add_glider(coord loc) {
-
     SDL_GetMouseState(&(loc.x), &(loc.y));
 
     let_there_be_light(loc);
