@@ -63,6 +63,7 @@ struct coord {
     int y;
 
     coord() : x(0), y(0) {}
+    coord(int x, int y) : x(x), y(y) {}
 }; 
 
 bool running = true;
@@ -103,12 +104,21 @@ void* get_mouse_input(void* params);
 void update_cells();
 
 // Toggle the cell's state, change the color accordingly
+void fill_cell_with(coord loc, rgb32 color);
+
+// Toggle with WHITE
 void let_there_be_light(coord loc);
+
+// Toggle with BLACK
+void darkness_in_the_deep(coord loc);
 
 // Set up the grid with an existing layout specified by a file
 void load_grid(FILE * layout);
 
+// Clear the board and bitmap
+void clear_pixels();
 
+void add_glider(coord loc);
 
 
 
