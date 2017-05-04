@@ -38,6 +38,7 @@ __global__ void life_or_death(grid* gpu_g) {
 void* get_keyboard_input(void* params) {
     bool clear = false;
     bool pause = false;
+    bool step = false;
     bool quit = false;
     bool glider = false;
 
@@ -54,11 +55,13 @@ void* get_keyboard_input(void* params) {
                         clear = true;
                         break;
                     case SDL_SCANCODE_G:
-
                         glider = true;
                         break;
                     case SDL_SCANCODE_P:
                         pause = true;
+                        break;
+                    case SDL_SCANCODE_SPACE:
+                        step = paused;
                         break;
                     case SDL_SCANCODE_Q:
                         quit = true;
@@ -88,6 +91,12 @@ void* get_keyboard_input(void* params) {
                             paused = !(paused);
                             puts("Pause toggle!");
                             pause = false;
+                        }
+                        break;
+                    case SDL_SCANCODE_SPACE:
+                        if (step) {
+                            update_cells();
+                            step = false;
                         }
                         break;
                     case SDL_SCANCODE_Q:
