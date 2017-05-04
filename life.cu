@@ -96,7 +96,7 @@ void* get_keyboard_input(void* params) {
                         if (clear) {
                             for (int x = 0; x < BMP_WIDTH; x++) {
                                 for (int y = 0; y < BMP_HEIGHT; y++) {
-                                    bmp->set(x, y, BLACK);
+                                    bmp->set(x, y, preset_colors[BLACK]);
                                 }
                             }
                             memset(g->board, 0, sizeof(grid));
@@ -167,6 +167,7 @@ void update_cells() {
         fprintf(stderr, "Failed to allocate grid on GPU\n");
         exit(2);
     }
+
     if (cudaMalloc(&(gpu_g->board), sizeof(int) * gpu_g->height * gpu_g->width) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate grid board on GPU\n");
         exit(2);
@@ -235,10 +236,10 @@ void update_cells() {
     // number of block to run (rounding up to include all threads)
     size_t grid_blocks = (GRID_WIDTH*GRID_HEIGHT + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
-    //count_neighbors<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
-    //cudaDeviceSynchronize();
-    //life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors, gpu_regions);
-    //cudaDeviceSynchronize();
+    count_neighbors<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
+    cudaDeviceSynchronize();
+    life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors, gpu_regions);
+    cudaDeviceSynchronize();
 
     // copy the GPU grid back to the CPU
     if (cudaMemcpy(g, gpu_g, sizeof(grid), cudaMemcpyDeviceToHost) != cudaSuccess) {
@@ -287,9 +288,9 @@ void update_cells() {
 // 
 void let_there_be_light(coord loc) {
     // indicate in the boolean grid that cell's state has been changed
-    g->set(loc.y/CELL_DIM, loc.x/CELL_DIM, 1);
-    rgb32 color = g->get(loc.y/CELL_DIM, loc.x/CELL_DIM) > 0 ? WHITE : BLACK;
-    regions->inc((loc.y/CELL_DIM)/REGION_DIM, (loc.x/CELL_DIM)/REGION_DIM);
+    g->set(loc.y/CELL_DIM,loc.x/CELL_DIM, 1);
+    rgb32 color = g->get(loc.y/CELL_DIM,loc.x/CELL_DIM) ? preset_colors[WHITE] : preset_colors[BLACK];
+    regions->inc((loc.y/CELL_DIM)/REGION_DIM,(loc.x/CELL_DIM)/REGION_DIM);
 
     // Find upper-left corner in boolean grid of cell
     int x_start = (loc.x / CELL_DIM) * CELL_DIM;
@@ -334,21 +335,13 @@ rgb_f32 interpolate_colors(int current_age, int old_age, int new_age, rgb_f32 ol
 rgb32 age_to_color(int age) {
     // dead cells are black, which is different behavior from living cells
     if (age == 0) {
-        return BLACK;
+        return preset_colors[BLACK];
     }
 
     // living cells "age" in the following way:
-    // white -> yellow -> red -> dark red
     int transition_time = 7;
-    rgb_f32 colors[5] = {
-        rgb_f32(255,255,255),
-        rgb_f32(255,255,0),
-        rgb_f32(255,0  ,0),
-        rgb_f32(0 ,0  ,255),
-        rgb_f32(0 ,0  ,255),
-    };
 
-    int interp = min(3, age / transition_time);
+    int interp = min(NUM_COLORS - 1, age / transition_time);
     rgb_f32 color = interpolate_colors(
             age, 
             interp * transition_time, 
@@ -411,7 +404,10 @@ int main(int argc, char ** argv) {
     while(running) {
 
         // process events
-        while(SDL_PollEvent(&event) == 1); 
+        while(SDL_PollEvent(&event) == 1) {
+            // If the event is a quit event, then leave the loop
+            if(event.type == SDL_QUIT) running = false;
+        }
 
         // releases the input threads to get input;
         pthread_barrier_wait(&barrier); 
