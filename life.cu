@@ -13,18 +13,20 @@ __global__ void count_neighbors(grid* gpu_g, grid* gpu_neighbors) {
     int top = max(0, row - 1);
     int bottom = min(GRID_HEIGHT - 1, row + 1);
 
-    gpu_neighbors->board[row][col] = 0;
+    gpu_neighbors->set(row, col, 0);
 
-    for(int j = left; j <= right; j++) {
-        for(int i = top; i <= bottom; i++) {
-            gpu_neighbors->board[row][col] += (!(col == j && row == i) && gpu_g->board[i][j]) ? 1 : 0;
+    for (int r = top; r <= bottom; r++) {
+        for (int c = left; c <= right; c++) {
+            if (!(col == c && row == r) && (gpu_g->get(r, c) > 0)) {
+                gpu_neighbors->inc(row, col);
+            }
         }
     }
 
 }
 
 // use Conway's update algorithm to decide whether or not to toggle cell 
-__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, tempgrid* gpu_regions) {
+__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, grid* gpu_regions) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
 
@@ -32,24 +34,24 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, tempgrid* gpu_re
     int row = index / GRID_WIDTH;
     int col = index % GRID_WIDTH;
 
-    if (gpu_regions->board[row / REGION_DIM][col / REGION_DIM] > 0) {
-        switch(gpu_neighbors->board[row][col]) {
+    if (gpu_regions->get(row / REGION_DIM, col / REGION_DIM) > 0) {
+        switch(gpu_neighbors->get(row, col)) {
             case 2: // alive cell stays alive; dead cell stays dead
-                if(gpu_g->board[row][col] > 0) { // alive cell stays alive
-                    gpu_g->board[row][col]++;
+                if(gpu_g->get(row, col) > 0) { // alive cell stays alive
+                    gpu_g->inc(row, col);
                 }
                 break;
             case 3: // alive cell stays alive; dead cell comes alive
-                if (gpu_g->board[row][col] == 0) { // dead cell comes alive
-                    gpu_regions->board[row / REGION_DIM][col / REGION_DIM]++;
+                if (gpu_g->get(row, col) == 0) { // dead cell comes alive
+                    gpu_regions->inc(row / REGION_DIM, col / REGION_DIM);
                 }
-                gpu_g->board[row][col]++;
+                gpu_g->inc(row, col);
                 break;
             default: // alive cell dies; dead cell stays dead
-                if (gpu_g->board[row][col] > 0) { // alive cell dies
-                    gpu_regions->board[row / REGION_DIM][col / REGION_DIM]--;
+                if (gpu_g->get(row, col) > 0) { // alive cell dies
+                    gpu_regions->dec(row / REGION_DIM, col / REGION_DIM);
                 }
-                gpu_g->board[row][col] = 0;
+                gpu_g->set(row, col, 0);
                 break;
         }
 
@@ -165,6 +167,10 @@ void update_cells() {
         fprintf(stderr, "Failed to allocate grid on GPU\n");
         exit(2);
     }
+    if (cudaMalloc(&(gpu_g->board), sizeof(int) * gpu_g->height * gpu_g->width) != cudaSuccess) {
+        fprintf(stderr, "Failed to allocate grid board on GPU\n");
+        exit(2);
+    } 
 
     // alocate space for GPU bitmap
     bitmap* gpu_bmp;
@@ -181,15 +187,27 @@ void update_cells() {
     }
 
     // allocate space for neighbors
-    tempgrid* regions;
-    if (cudaMalloc(&regions, sizeof(tempgrid)) != cudaSuccess) {
+    grid* gpu_regions;
+    if (cudaMalloc(&gpu_regions, sizeof(grid)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate regions grid on GPU\n");
         exit(2);
     }
+    if (cudaMalloc(&gpu_regions->board, sizeof(int) * gpu_regions->height * gpu_regions->width) != cudaSuccess) {
+        fprintf(stderr, "Failed to allocate regions board on GPU\n");
+        exit(2);
+    } 
+
+
 
     // copy the CPU grid to the GPU grid
     if (cudaMemcpy(gpu_g, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid to the GPU\n");
+    }
+
+    // copy the CPU grid array to the GPU grid array
+    if (cudaMemcpy(gpu_g->board, g->board, sizeof(int) * gpu_g->height * gpu_g->width,
+                cudaMemcpyHostToDevice) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy grid array to the GPU\n");
     }
 
     // copy the CPU bitmap to the GPU bitmap
@@ -203,53 +221,75 @@ void update_cells() {
     }
 
     // copy the GPU regions grid to the GPU regions grid
-    if (cudaMemcpy(gpu_regions, regions, sizeof(tempgrid), cudaMemcpyHostToDevice) != cudaSuccess) {
+    if (cudaMemcpy(gpu_regions, regions, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid to the GPU\n");
     }
+
+    // copy the CPU regions array to the GPU regions array
+    if (cudaMemcpy(gpu_regions->board, regions->board, sizeof(int) * gpu_regions->height * gpu_regions->width,
+                cudaMemcpyHostToDevice) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy regions array to the GPU\n");
+    }
+
 
     // number of block to run (rounding up to include all threads)
     size_t grid_blocks = (GRID_WIDTH*GRID_HEIGHT + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
-    count_neighbors<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
-    cudaDeviceSynchronize();
-    life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors, gpu_regions);
-    cudaDeviceSynchronize();
+    //count_neighbors<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
+    //cudaDeviceSynchronize();
+    //life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors, gpu_regions);
+    //cudaDeviceSynchronize();
 
     // copy the GPU grid back to the CPU
     if (cudaMemcpy(g, gpu_g, sizeof(grid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid from the GPU\n");
     }
 
-    // copy the CPU bitmap to the GPU bitmap
+    // copy the GPU grid array back to the CPU
+    if (cudaMemcpy(g->board, gpu_g->board, sizeof(int) * gpu_g->height * gpu_g->width,
+                cudaMemcpyDeviceToHost) != cudaSuccess) {
+        fprintf(stderr, "Failed to copy grid array from the GPU\n");
+    }
+
+    // copy the GPU bitmap back to the CPU 
     if (cudaMemcpy(bmp, gpu_bmp, sizeof(bitmap), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy bitmap from the GPU\n");
     }
 
-    // copy the CPU regions grid to the GPU regions grid
-    if (cudaMemcpy(regions, gpu_regions, sizeof(tempgrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
+    // copy the GPU regions grid back to the CPU
+    if (cudaMemcpy(regions, gpu_regions, sizeof(grid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid from the GPU\n");
+    }
+
+    // copy the GPU grid array back to the CPU
+    if (cudaMemcpy(regions->board, gpu_regions->board, sizeof(int) * gpu_regions->height * gpu_regions->width,
+                cudaMemcpyDeviceToHost) != cudaSuccess) {
+        fprintf(stderr, "Failed to regions grid array from the GPU\n");
     }
 
     // loop over points in the bitmap to change color
     for(int row = 0; row < BMP_HEIGHT; row++){
         for(int col = 0; col < BMP_WIDTH; col++){
-            rgb32 color = age_to_color(g->board[row / CELL_DIM][col / CELL_DIM]);
+            rgb32 color = age_to_color(g->get(row / CELL_DIM, col / CELL_DIM));
             bmp->set(col, row, color);
         }
     }
 
     // free everything we malloc'ed
+    cudaFree(gpu_g->board);
     cudaFree(gpu_g);
     cudaFree(gpu_bmp);
+    cudaFree(gpu_regions->board);
     cudaFree(gpu_regions);
+    
 }
 
 // 
 void let_there_be_light(coord loc) {
     // indicate in the boolean grid that cell's state has been changed
-    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = 0;
-    rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? WHITE : BLACK;
-    regions->board[(loc.y/CELL_DIM)/REGION_DIM][(loc.x/CELL_DIM)/REGION_DIM]++;
+    g->set(loc.y/CELL_DIM, loc.x/CELL_DIM, 1);
+    rgb32 color = g->get(loc.y/CELL_DIM, loc.x/CELL_DIM) > 0 ? WHITE : BLACK;
+    regions->inc((loc.y/CELL_DIM)/REGION_DIM, (loc.x/CELL_DIM)/REGION_DIM);
 
     // Find upper-left corner in boolean grid of cell
     int x_start = (loc.x / CELL_DIM) * CELL_DIM;
@@ -325,13 +365,17 @@ rgb32 age_to_color(int age) {
  */
 int main(int argc, char ** argv) {
 
-    // Create the bitmap 
+    // create the bitmap 
     bitmap bits(BMP_WIDTH, BMP_HEIGHT);
     bmp = &bits;
 
-    // Create the grid
-    grid grd(0);
+    // create the grid
+    grid grd(GRID_HEIGHT, GRID_WIDTH);
     g = &grd;
+
+    // create the regions grid
+    grid rgns((GRID_HEIGHT/REGION_DIM), (GRID_WIDTH/REGION_DIM));
+    regions = &rgns;
 
     if (argc > 1) {
         FILE * fp;

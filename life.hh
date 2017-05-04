@@ -49,22 +49,33 @@ static pthread_barrier_t barrier;
 
 // grid struct
 struct grid {
-    int board[(int) GRID_HEIGHT][(int) GRID_WIDTH];
+    int height;
+    int width;
+    int* board;
 
-    grid(int value) {
-        memset(board, value, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
+    grid(int height, int width) {
+        this->height = height;
+        this->width = width;
+        this->board = (int*) malloc(sizeof(int) * height * width);
+        memset(board, 0, sizeof(int) * height * width);
+    }
+
+    __host__ __device__ int get(int row, int col) {
+        return this->board[row * width + col];
+    }
+
+    __host__ __device__ void set(int row, int col, int val) {
+        this->board[row * width + col] = val;
+    }
+
+    __host__ __device__ void inc(int row, int col) {
+        this->board[row * width + col]++;
+    }
+
+    __host__ __device__ void dec(int row, int col) {
+        this->board[row * width + col]--;
     }
 };
-
-// grid struct
-struct tempgrid {
-    int board[(int) GRID_HEIGHT / REGION_DIM][(int) GRID_WIDTHgrid / REGION_DIM];
-
-    tempgrid(int value) {
-        memset(board, value, sizeof(int) * 1 * 6 * 8 * -1 * -1);
-    }
-};
-
 
 // coordinate struct
 struct coord {
@@ -99,7 +110,7 @@ bitmap* bmp;
 grid* g;
 
 // grid for indicating alive cells in region
-tempgrid* regions; 
+grid* regions; 
 
 // Create a GUI window
 gui ui("Conway's Game of Life", BMP_WIDTH, BMP_HEIGHT);
