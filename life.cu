@@ -34,7 +34,7 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_reg
     int row = index / GRID_WIDTH;
     int col = index % GRID_WIDTH;
 
-    //if (gpu_regions->get(row / REGION_DIM, col / REGION_DIM) > 0) {
+    if (gpu_regions->get(row / REGION_DIM, col / REGION_DIM) > 0) {
         switch(gpu_neighbors->get(row, col)) {
             case 2: // alive cell stays alive; dead cell stays dead
                 if(gpu_g->get(row, col) > 0) { // alive cell stays alive
@@ -55,7 +55,7 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_reg
                 break;
         }
 
-    //}
+    }
 
 }
 
