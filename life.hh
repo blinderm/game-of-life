@@ -37,10 +37,6 @@ using namespace std;
 // threads per block
 #define THREADS_PER_BLOCK 64
 
-// colors!
-#define WHITE rgb32(255.,255.,255.)
-#define BLACK rgb32(0.,0.,0.)
-
 // update delay
 #define DELAY 25
 
@@ -57,11 +53,11 @@ struct grid {
 };
 
 // grid struct
-struct tempgrid {
-    int board[(int) GRID_HEIGHT / REGION_DIM][(int) GRID_WIDTHgrid / REGION_DIM];
+struct reggrid {
+    int board[(int) GRID_HEIGHT / REGION_DIM][(int) GRID_WIDTH / REGION_DIM];
 
-    tempgrid(int value) {
-        memset(board, value, sizeof(int) * 1 * 6 * 8 * -1 * -1);
+    reggrid(int value) {
+        memset(board, value, sizeof(int) * (GRID_HEIGHT/REGION_DIM) * (GRID_WIDTH/REGION_DIM));
     }
 };
 
@@ -89,6 +85,26 @@ struct input_args {
     }
 };
 
+// colors!
+#define NUM_COLORS 3
+
+// array of colors for interpolation
+rgb_f32 colors[NUM_COLORS + 1] = { 
+    rgb_f32(0, 0, 255),
+    rgb_f32(255, 0, 255),
+    rgb_f32(0, 0, 255),
+    rgb_f32(0, 0, 255),
+};
+
+// Preset colors
+#define BLACK 0
+#define WHITE 1
+
+rgb32 preset_colors[2] = {
+    rgb32(0, 0, 0),
+    rgb32(255, 255, 255),
+};
+
 // indicate whether or not the simulation is paused
 bool paused = true;
 
@@ -99,25 +115,24 @@ bitmap* bmp;
 grid* g;
 
 // grid for indicating alive cells in region
-tempgrid* regions; 
+reggrid* regions; 
 
-// Create a GUI window
+// create a GUI window
 gui ui("Conway's Game of Life", BMP_WIDTH, BMP_HEIGHT);
 
-
-// Get input from the keyboard and execute proper command 
+// get input from the keyboard and execute proper command 
 void* get_keyboard_input(void* params);
 
-// Get input from the mouse and toggle the appropriate cell's state/color
+// get input from the mouse and toggle the appropriate cell's state/color
 void* get_mouse_input(void* params);
 
-// Update each cell in order to advance the simulation
+// update each cell in order to advance the simulation
 void update_cells();
 
-// Toggle the cell's state, change the color accordingly
+// toggle the cell's state, change the color accordingly
 void let_there_be_light(coord loc);
 
-// Set up the grid with an existing layout specified by a file
+// set up the grid with an existing layout specified by a file
 void load_grid(FILE * layout);
 
 rgb32 age_to_color(int age);

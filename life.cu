@@ -24,7 +24,7 @@ __global__ void count_neighbors(grid* gpu_g, grid* gpu_neighbors) {
 }
 
 // use Conway's update algorithm to decide whether or not to toggle cell 
-__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, tempgrid* gpu_regions) {
+__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_regions) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
 
@@ -94,7 +94,7 @@ void* get_keyboard_input(void* params) {
                         if (clear) {
                             for (int x = 0; x < BMP_WIDTH; x++) {
                                 for (int y = 0; y < BMP_HEIGHT; y++) {
-                                    bmp->set(x, y, BLACK);
+                                    bmp->set(x, y, preset_colors[BLACK]);
                                 }
                             }
                             memset(g->board, 0, sizeof(grid));
@@ -181,8 +181,8 @@ void update_cells() {
     }
 
     // allocate space for neighbors
-    tempgrid* regions;
-    if (cudaMalloc(&regions, sizeof(tempgrid)) != cudaSuccess) {
+    reggrid* gpu_regions;
+    if (cudaMalloc(&gpu_regions, sizeof(reggrid)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate regions grid on GPU\n");
         exit(2);
     }
@@ -203,7 +203,7 @@ void update_cells() {
     }
 
     // copy the GPU regions grid to the GPU regions grid
-    if (cudaMemcpy(gpu_regions, regions, sizeof(tempgrid), cudaMemcpyHostToDevice) != cudaSuccess) {
+    if (cudaMemcpy(gpu_regions, regions, sizeof(reggrid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid to the GPU\n");
     }
 
@@ -226,7 +226,7 @@ void update_cells() {
     }
 
     // copy the CPU regions grid to the GPU regions grid
-    if (cudaMemcpy(regions, gpu_regions, sizeof(tempgrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
+    if (cudaMemcpy(regions, gpu_regions, sizeof(reggrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid from the GPU\n");
     }
 
@@ -247,8 +247,8 @@ void update_cells() {
 // 
 void let_there_be_light(coord loc) {
     // indicate in the boolean grid that cell's state has been changed
-    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = 0;
-    rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? WHITE : BLACK;
+    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = 1;
+    rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? preset_colors[WHITE] : preset_colors[BLACK];
     regions->board[(loc.y/CELL_DIM)/REGION_DIM][(loc.x/CELL_DIM)/REGION_DIM]++;
 
     // Find upper-left corner in boolean grid of cell
@@ -294,21 +294,13 @@ rgb_f32 interpolate_colors(int current_age, int old_age, int new_age, rgb_f32 ol
 rgb32 age_to_color(int age) {
     // dead cells are black, which is different behavior from living cells
     if (age == 0) {
-        return BLACK;
+        return preset_colors[BLACK];
     }
 
     // living cells "age" in the following way:
-    // white -> yellow -> red -> dark red
     int transition_time = 7;
-    rgb_f32 colors[5] = {
-        rgb_f32(255,255,255),
-        rgb_f32(255,255,0),
-        rgb_f32(255,0  ,0),
-        rgb_f32(0 ,0  ,255),
-        rgb_f32(0 ,0  ,255),
-    };
 
-    int interp = min(3, age / transition_time);
+    int interp = min(NUM_COLORS - 1, age / transition_time);
     rgb_f32 color = interpolate_colors(
             age, 
             interp * transition_time, 
@@ -332,6 +324,11 @@ int main(int argc, char ** argv) {
     // Create the grid
     grid grd(0);
     g = &grd;
+
+    // Create the regions grid
+    reggrid rgns(0);
+    regions = &rgns;
+
 
     if (argc > 1) {
         FILE * fp;
@@ -367,7 +364,10 @@ int main(int argc, char ** argv) {
     while(running) {
 
         // process events
-        while(SDL_PollEvent(&event) == 1); 
+        while(SDL_PollEvent(&event) == 1) {
+            // If the event is a quit event, then leave the loop
+            if(event.type == SDL_QUIT) running = false;
+        }
 
         // releases the input threads to get input;
         pthread_barrier_wait(&barrier); 
