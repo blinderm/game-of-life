@@ -57,11 +57,11 @@ struct grid {
 };
 
 // grid struct
-struct tempgrid {
-    int board[(int) GRID_HEIGHT / REGION_DIM][(int) GRID_WIDTHgrid / REGION_DIM];
+struct reggrid {
+    int board[(int) GRID_HEIGHT / REGION_DIM][(int) GRID_WIDTH / REGION_DIM];
 
-    tempgrid(int value) {
-        memset(board, value, sizeof(int) * 1 * 6 * 8 * -1 * -1);
+    reggrid(int value) {
+        memset(board, value, sizeof(int) * (GRID_HEIGHT/REGION_DIM) * (GRID_WIDTH/REGION_DIM));
     }
 };
 
@@ -99,7 +99,7 @@ bitmap* bmp;
 grid* g;
 
 // grid for indicating alive cells in region
-tempgrid* regions; 
+reggrid* regions; 
 
 // Create a GUI window
 gui ui("Conway's Game of Life", BMP_WIDTH, BMP_HEIGHT);

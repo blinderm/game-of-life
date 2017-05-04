@@ -24,7 +24,7 @@ __global__ void count_neighbors(grid* gpu_g, grid* gpu_neighbors) {
 }
 
 // use Conway's update algorithm to decide whether or not to toggle cell 
-__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, tempgrid* gpu_regions) {
+__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_regions) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
 
@@ -181,8 +181,8 @@ void update_cells() {
     }
 
     // allocate space for neighbors
-    tempgrid* regions;
-    if (cudaMalloc(&regions, sizeof(tempgrid)) != cudaSuccess) {
+    reggrid* gpu_regions;
+    if (cudaMalloc(&gpu_regions, sizeof(reggrid)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate regions grid on GPU\n");
         exit(2);
     }
@@ -203,7 +203,7 @@ void update_cells() {
     }
 
     // copy the GPU regions grid to the GPU regions grid
-    if (cudaMemcpy(gpu_regions, regions, sizeof(tempgrid), cudaMemcpyHostToDevice) != cudaSuccess) {
+    if (cudaMemcpy(gpu_regions, regions, sizeof(reggrid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid to the GPU\n");
     }
 
@@ -226,7 +226,7 @@ void update_cells() {
     }
 
     // copy the CPU regions grid to the GPU regions grid
-    if (cudaMemcpy(regions, gpu_regions, sizeof(tempgrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
+    if (cudaMemcpy(regions, gpu_regions, sizeof(reggrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid from the GPU\n");
     }
 
@@ -247,7 +247,7 @@ void update_cells() {
 // 
 void let_there_be_light(coord loc) {
     // indicate in the boolean grid that cell's state has been changed
-    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = 0;
+    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = 1;
     rgb32 color = g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] ? WHITE : BLACK;
     regions->board[(loc.y/CELL_DIM)/REGION_DIM][(loc.x/CELL_DIM)/REGION_DIM]++;
 
@@ -332,6 +332,11 @@ int main(int argc, char ** argv) {
     // Create the grid
     grid grd(0);
     g = &grd;
+
+    // Create the regions grid
+    reggrid rgns(0);
+    regions = &rgns;
+
 
     if (argc > 1) {
         FILE * fp;
