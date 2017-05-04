@@ -26,7 +26,7 @@ __global__ void count_neighbors(grid* gpu_g, grid* gpu_neighbors) {
 }
 
 // use Conway's update algorithm to decide whether or not to toggle cell 
-__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, grid* gpu_regions) {
+__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_regions) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
 
@@ -168,10 +168,11 @@ void update_cells() {
         exit(2);
     }
 
-    if (cudaMalloc(&(gpu_g->board), sizeof(int) * gpu_g->height * gpu_g->width) != cudaSuccess) {
+    /*
+    if (cudaMalloc(gpu_g->board), sizeof(int) * GRID_HEIGHT * GRID_WIDTH)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate grid board on GPU\n");
         exit(2);
-    } 
+    } */
 
     // alocate space for GPU bitmap
     bitmap* gpu_bmp;
@@ -188,15 +189,16 @@ void update_cells() {
     }
 
     // allocate space for neighbors
-    grid* gpu_regions;
-    if (cudaMalloc(&gpu_regions, sizeof(grid)) != cudaSuccess) {
+    reggrid* gpu_regions;
+    if (cudaMalloc(&gpu_regions, sizeof(reggrid)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate regions grid on GPU\n");
         exit(2);
     }
-    if (cudaMalloc(&gpu_regions->board, sizeof(int) * gpu_regions->height * gpu_regions->width) != cudaSuccess) {
+    /*
+    if (cudaMalloc(&gpu_regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) * (GRID_WIDTH/REGION_DIM)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate regions board on GPU\n");
         exit(2);
-    } 
+    } */
 
 
 
@@ -206,7 +208,7 @@ void update_cells() {
     }
 
     // copy the CPU grid array to the GPU grid array
-    if (cudaMemcpy(gpu_g->board, g->board, sizeof(int) * gpu_g->height * gpu_g->width,
+    if (cudaMemcpy(gpu_g->board, g->board, sizeof(int) * GRID_HEIGHT * GRID_WIDTH,
                 cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid array to the GPU\n");
     }
@@ -222,13 +224,13 @@ void update_cells() {
     }
 
     // copy the GPU regions grid to the GPU regions grid
-    if (cudaMemcpy(gpu_regions, regions, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
+    if (cudaMemcpy(gpu_regions, regions, sizeof(reggrid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid to the GPU\n");
     }
 
     // copy the CPU regions array to the GPU regions array
-    if (cudaMemcpy(gpu_regions->board, regions->board, sizeof(int) * gpu_regions->height * gpu_regions->width,
-                cudaMemcpyHostToDevice) != cudaSuccess) {
+    if (cudaMemcpy(gpu_regions->board, regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) *
+                (GRID_WIDTH/REGION_DIM),  cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions array to the GPU\n");
     }
 
@@ -247,7 +249,7 @@ void update_cells() {
     }
 
     // copy the GPU grid array back to the CPU
-    if (cudaMemcpy(g->board, gpu_g->board, sizeof(int) * gpu_g->height * gpu_g->width,
+    if (cudaMemcpy(g->board, gpu_g->board, sizeof(int) * GRID_HEIGHT * GRID_WIDTH,
                 cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid array from the GPU\n");
     }
@@ -257,14 +259,14 @@ void update_cells() {
         fprintf(stderr, "Failed to copy bitmap from the GPU\n");
     }
 
-    // copy the GPU regions grid back to the CPU
-    if (cudaMemcpy(regions, gpu_regions, sizeof(grid), cudaMemcpyDeviceToHost) != cudaSuccess) {
+    // copy the CPU regions grid to the GPU regions grid
+    if (cudaMemcpy(regions, gpu_regions, sizeof(reggrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid from the GPU\n");
     }
 
     // copy the GPU grid array back to the CPU
-    if (cudaMemcpy(regions->board, gpu_regions->board, sizeof(int) * gpu_regions->height * gpu_regions->width,
-                cudaMemcpyDeviceToHost) != cudaSuccess) {
+    if (cudaMemcpy(regions->board, gpu_regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) *
+                (GRID_WIDTH/REGION_DIM), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to regions grid array from the GPU\n");
     }
 
@@ -363,11 +365,11 @@ int main(int argc, char ** argv) {
     bmp = &bits;
 
     // create the grid
-    grid grd(GRID_HEIGHT, GRID_WIDTH);
+    grid grd(0);
     g = &grd;
 
-    // create the regions grid
-    grid rgns((GRID_HEIGHT/REGION_DIM), (GRID_WIDTH/REGION_DIM));
+    // Create the regions grid
+    reggrid rgns(0);
     regions = &rgns;
 
     if (argc > 1) {

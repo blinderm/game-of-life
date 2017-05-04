@@ -45,33 +45,46 @@ static pthread_barrier_t barrier;
 
 // grid struct
 struct grid {
-    int height;
-    int width;
-    int* board;
+    int board[GRID_HEIGHT][GRID_WIDTH];
 
-    grid(int height, int width) {
-        this->height = height;
-        this->width = width;
-        memset(board, 0, sizeof(int) * height * width);
-    }
-
-    int cpu_malloc() {
-        this->board = (int*) malloc(sizeof(int) * height * width);
+    grid(int val) {
+        memset(board, val, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
     }
 
     __host__ __device__ int get(int row, int col) {
-        return this->board[row * width + col];
+        return this->board[row][col];
     }
-
     __host__ __device__ void set(int row, int col, int value) {
-        this->board[row * width + col] = value;
+        this->board[row][col] = value;
     }
-
     __host__ __device__ void inc(int row, int col) {
-        this->board[row * width + col]++;
+        this->board[row][col]++;
     }
     __host__ __device__ void dec(int row, int col) {
-        this->board[row * width + col]--;
+        this->board[row][col]--;
+    }
+};
+
+
+// grid struct
+struct reggrid {
+    int board[(int) GRID_HEIGHT / REGION_DIM][(int) GRID_WIDTH / REGION_DIM];
+
+    reggrid(int val) { 
+        memset(board, val, sizeof(int) * (GRID_HEIGHT/REGION_DIM) * (GRID_WIDTH/REGION_DIM));
+    }
+
+    __host__ __device__ int get(int row, int col) {
+        return this->board[row][col];
+    }
+    __host__ __device__ void set(int row, int col, int value) {
+        this->board[row][col] = value;
+    }
+    __host__ __device__ void inc(int row, int col) {
+        this->board[row][col]++;
+    }
+    __host__ __device__ void dec(int row, int col) {
+        this->board[row][col]--;
     }
 };
 
@@ -128,7 +141,7 @@ bitmap* bmp;
 grid* g;
 
 // grid for indicating alive cells in region
-grid* regions; 
+reggrid* regions; 
 
 // create a GUI window
 gui ui("Conway's Game of Life", BMP_WIDTH, BMP_HEIGHT);
