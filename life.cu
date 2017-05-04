@@ -34,7 +34,7 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_reg
     int row = index / GRID_WIDTH;
     int col = index % GRID_WIDTH;
 
-    if (gpu_regions->get(row / REGION_DIM, col / REGION_DIM) > 0) {
+    //if (gpu_regions->get(row / REGION_DIM, col / REGION_DIM) > 0) {
         switch(gpu_neighbors->get(row, col)) {
             case 2: // alive cell stays alive; dead cell stays dead
                 if(gpu_g->get(row, col) > 0) { // alive cell stays alive
@@ -55,14 +55,14 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_reg
                 break;
         }
 
-    }
+    //}
 
 }
 
 
 // get input from the keyboard and execute proper command 
-// UPDATE: currently, this only works as CTRL-P, CTRL-C, and CTRL-Q
 void* get_keyboard_input(void* params) {
+   
     bool clear = false;
     bool pause = false;
     bool step = false;
@@ -101,9 +101,7 @@ void* get_keyboard_input(void* params) {
                 switch (args->event->key.keysym.scancode) {
                     case SDL_SCANCODE_C:
                         if (clear) {
-
                             clear_pixels();
-
                             puts("Cleared");
                             clear = false;
                         }
@@ -184,10 +182,10 @@ void update_cells() {
     }
 
     /*
-    if (cudaMalloc(gpu_g->board), sizeof(int) * GRID_HEIGHT * GRID_WIDTH)) != cudaSuccess) {
-        fprintf(stderr, "Failed to allocate grid board on GPU\n");
-        exit(2);
-    } */
+       if (cudaMalloc(gpu_g->board), sizeof(int) * GRID_HEIGHT * GRID_WIDTH)) != cudaSuccess) {
+       fprintf(stderr, "Failed to allocate grid board on GPU\n");
+       exit(2);
+       } */
 
     // alocate space for GPU bitmap
     bitmap* gpu_bmp;
@@ -210,10 +208,10 @@ void update_cells() {
         exit(2);
     }
     /*
-    if (cudaMalloc(&gpu_regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) * (GRID_WIDTH/REGION_DIM)) != cudaSuccess) {
-        fprintf(stderr, "Failed to allocate regions board on GPU\n");
-        exit(2);
-    } */
+       if (cudaMalloc(&gpu_regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) * (GRID_WIDTH/REGION_DIM)) != cudaSuccess) {
+       fprintf(stderr, "Failed to allocate regions board on GPU\n");
+       exit(2);
+       } */
 
 
 
@@ -299,12 +297,10 @@ void update_cells() {
     cudaFree(gpu_bmp);
     cudaFree(gpu_regions->board);
     cudaFree(gpu_regions);
-    
+
 }
 
 void fill_cell_with(coord loc, rgb32 color) {
-    // indicate in the boolean grid that cell's state has been changed
-    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = 1;
 
     // Find upper-left corner in boolean grid of cell
     int x_start = (loc.x / CELL_DIM) * CELL_DIM;
@@ -319,10 +315,16 @@ void fill_cell_with(coord loc, rgb32 color) {
 }
 
 void let_there_be_light(coord loc) {
-    fill_cell_with(loc, preset_colors[WHITE]);
+    g->set(loc.y/CELL_DIM, loc.x/CELL_DIM, 1);
+    regions->inc((loc.y/CELL_DIM)/REGION_DIM, 
+            (loc.x/REGION_DIM)/REGION_DIM);
+    fill_cell_with(loc, colors[0]);
 }
 
 void darkness_in_the_deep(coord loc) {
+    g->set(loc.y/CELL_DIM, loc.x/CELL_DIM, 0);
+    regions->dec((loc.y/CELL_DIM)/REGION_DIM, 
+            (loc.x/REGION_DIM)/REGION_DIM);
     fill_cell_with(loc, preset_colors[BLACK]);
 }
 

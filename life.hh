@@ -51,6 +51,10 @@ struct grid {
         memset(board, val, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
     }
 
+    void fill(int value) {
+        memset(board, value, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
+    }
+
     __host__ __device__ int get(int row, int col) {
         return this->board[row][col];
     }
@@ -88,7 +92,7 @@ struct reggrid {
     }
 
     void fill(int value) {
-      memset(board, value, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
+        memset(board, value, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
     }
 };
 
@@ -177,7 +181,7 @@ void clear_pixels();
 
 void add_glider(coord loc);
 
-
+rgb32 age_to_color(int age);
 
 
 #endif

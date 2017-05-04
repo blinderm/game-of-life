@@ -11,45 +11,45 @@
 #define fmax(x,y) ( ( (x) > (y) ) ? (x) : (y) )
 
 struct rgb_f32 { 
-  double blue;
-  double green;
-  double red;
+    double blue;
+    double green;
+    double red;
 
-  rgb_f32() : red(0.), green(0.), blue(0.) {}
-  rgb_f32(double r, double g, double b) : red(r), green(g), blue(b) {}
+    rgb_f32() : red(0.), green(0.), blue(0.) {}
+    rgb_f32(double r, double g, double b) : red(r), green(g), blue(b) {}
 
-  rgb_f32 operator+(const rgb_f32& color) {
-    return rgb_f32(
-        fmin(255, this->red + color.red), 
-        fmin(255, this->green + color.green), 
-        fmin(255, this->blue + color.blue)
-        );
-  }
-  rgb_f32 operator-(const rgb_f32& color) {
-    return rgb_f32(
-        fmax(0, this->red - color.red), 
-        fmax(0, this->green - color.green), 
-        fmax(0, this->blue - color.blue)
-        );
-  }
-  rgb_f32 operator-(void) {
-    return rgb_f32(
-        255 - this->red, 
-        255 - this->green, 
-        255 - this->blue
-        );
-  }
-  rgb_f32 operator*(const float scalar) {
-    if (scalar < 0) {
-      return rgb_f32(0.,0.,0.);
-    } else { 
-      return rgb_f32(
-          fmin(255, scalar * this->red), 
-          fmin(255, scalar * this->green), 
-          fmin(255, scalar * this->blue)
-          );
+    rgb_f32 operator+(const rgb_f32& color) {
+        return rgb_f32(
+                fmin(255, this->red + color.red), 
+                fmin(255, this->green + color.green), 
+                fmin(255, this->blue + color.blue)
+                );
     }
-  }
+    rgb_f32 operator-(const rgb_f32& color) {
+        return rgb_f32(
+                fmax(0, this->red - color.red), 
+                fmax(0, this->green - color.green), 
+                fmax(0, this->blue - color.blue)
+                );
+    }
+    rgb_f32 operator-(void) {
+        return rgb_f32(
+                255 - this->red, 
+                255 - this->green, 
+                255 - this->blue
+                );
+    }
+    rgb_f32 operator*(const float scalar) {
+        if (scalar < 0) {
+            return rgb_f32(0.,0.,0.);
+        } else { 
+            return rgb_f32(
+                    fmin(255, scalar * this->red), 
+                    fmin(255, scalar * this->green), 
+                    fmin(255, scalar * this->blue)
+                    );
+        }
+    }
 };
 
 struct rgb32 {
@@ -96,6 +96,12 @@ class bitmap {
         __host__ __device__ void set(int x, int y, rgb32 color) {
             assert(!(x < 0 || x >= _width || y < 0 || y >= _height)) ;
             _data[y*_width+x] = color;
+        }
+
+        void fill(rgb32 color) {
+            for (int x = 0; x < _width; x++)
+                for (int y = 0; y < _height; y++)
+                    set(x, y, color);
         }
 
         // Scale the color of each point by a given multiplier
