@@ -49,6 +49,12 @@ public:
     assert(!(x < 0 || x >= _width || y < 0 || y >= _height)) ;
     _data[y*_width+x] = color;
   }
+
+  void fill(rgb32 color) {
+    for (int x = 0; x < _width; x++)
+      for (int y = 0; y < _height; y++)
+        set(x, y, color);
+  }
   
   // Scale the color of each point by a given multiplier
   void darken(float multiplier) {
@@ -113,6 +119,7 @@ public:
       _data[y*_width] = rgb32();
     }
   }
+
   
 private:
   size_t _width;
