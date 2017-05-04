@@ -63,10 +63,11 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_reg
 // get input from the keyboard and execute proper command 
 // UPDATE: currently, this only works as CTRL-P, CTRL-C, and CTRL-Q
 void* get_keyboard_input(void* params) {
-
     bool clear = false;
     bool pause = false;
+    bool step = false;
     bool quit = false;
+    bool glider = false;
 
     input_args* args = (input_args*) params;
     while (running) {
@@ -80,8 +81,14 @@ void* get_keyboard_input(void* params) {
                     case SDL_SCANCODE_C:
                         clear = true;
                         break;
+                    case SDL_SCANCODE_G:
+                        glider = true;
+                        break;
                     case SDL_SCANCODE_P:
                         pause = true;
+                        break;
+                    case SDL_SCANCODE_SPACE:
+                        step = paused;
                         break;
                     case SDL_SCANCODE_Q:
                         quit = true;
@@ -94,21 +101,31 @@ void* get_keyboard_input(void* params) {
                 switch (args->event->key.keysym.scancode) {
                     case SDL_SCANCODE_C:
                         if (clear) {
-                            for (int x = 0; x < BMP_WIDTH; x++) {
-                                for (int y = 0; y < BMP_HEIGHT; y++) {
-                                    bmp->set(x, y, preset_colors[BLACK]);
-                                }
-                            }
-                            memset(g->board, 0, sizeof(grid));
+
+                            clear_pixels();
+
                             puts("Cleared");
                             clear = false;
+                        }
+                        break;
+                    case SDL_SCANCODE_G:
+                        if (glider) {
+                            add_glider(args->loc);
+                            puts("Glider");
+                            glider = false;
                         }
                         break;
                     case SDL_SCANCODE_P:
                         if (pause) {
                             paused = !(paused);
-                            pause = false;
                             puts("Pause toggle!");
+                            pause = false;
+                        }
+                        break;
+                    case SDL_SCANCODE_SPACE:
+                        if (step) {
+                            update_cells();
+                            step = false;
                         }
                         break;
                     case SDL_SCANCODE_Q:
@@ -127,14 +144,11 @@ void* get_keyboard_input(void* params) {
         // releases the main function to run updates
         pthread_barrier_wait(&barrier);
     }
-
     return NULL;
 }
 
-
 // get input from the mouse and toggle the appropriate cell's state/color
 void* get_mouse_input(void* params) {
-
     input_args* args = (input_args*) params;
     while(running) {
 
@@ -149,14 +163,15 @@ void* get_mouse_input(void* params) {
 
             let_there_be_light(args->loc);
         }
+        if (args->mouse_state & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+            darkness_in_the_deep(args->loc);
+        }
 
         pthread_barrier_wait(&barrier); // releases the main function to run updates
     }
 
     return NULL;
 }
-
-
 
 // update each cell in order to advance the simulation
 void update_cells() {
@@ -287,12 +302,9 @@ void update_cells() {
     
 }
 
-// 
-void let_there_be_light(coord loc) {
+void fill_cell_with(coord loc, rgb32 color) {
     // indicate in the boolean grid that cell's state has been changed
-    g->set(loc.y/CELL_DIM,loc.x/CELL_DIM, 1);
-    rgb32 color = g->get(loc.y/CELL_DIM,loc.x/CELL_DIM) ? preset_colors[WHITE] : preset_colors[BLACK];
-    regions->inc((loc.y/CELL_DIM)/REGION_DIM,(loc.x/CELL_DIM)/REGION_DIM);
+    g->board[loc.y/CELL_DIM][loc.x/CELL_DIM] = 1;
 
     // Find upper-left corner in boolean grid of cell
     int x_start = (loc.x / CELL_DIM) * CELL_DIM;
@@ -304,6 +316,14 @@ void let_there_be_light(coord loc) {
             bmp->set(x, y, color);
         }
     }
+}
+
+void let_there_be_light(coord loc) {
+    fill_cell_with(loc, preset_colors[WHITE]);
+}
+
+void darkness_in_the_deep(coord loc) {
+    fill_cell_with(loc, preset_colors[BLACK]);
 }
 
 void load_grid(FILE * layout) {
@@ -436,4 +456,19 @@ int main(int argc, char ** argv) {
     }
 
     return 0;
+}
+
+void clear_pixels() {
+    bmp->fill(preset_colors[BLACK]);
+    g->fill(0);
+}
+
+void add_glider(coord loc) {
+    SDL_GetMouseState(&(loc.x), &(loc.y));
+
+    let_there_be_light(loc);
+    let_there_be_light(coord(loc.x + CELL_DIM, loc.y + CELL_DIM));
+    let_there_be_light(coord(loc.x + CELL_DIM, loc.y + 2 * CELL_DIM));
+    let_there_be_light(coord(loc.x , loc.y + 2 * CELL_DIM));
+    let_there_be_light(coord(loc.x - CELL_DIM, loc.y + 2 * CELL_DIM));
 }

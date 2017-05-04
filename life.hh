@@ -86,6 +86,10 @@ struct reggrid {
     __host__ __device__ void dec(int row, int col) {
         this->board[row][col]--;
     }
+
+    void fill(int value) {
+      memset(board, value, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
+    }
 };
 
 // coordinate struct
@@ -94,6 +98,7 @@ struct coord {
     int y;
 
     coord() : x(0), y(0) {}
+    coord(int x, int y) : x(x), y(y) {}
 }; 
 
 bool running = true;
@@ -155,12 +160,24 @@ void* get_mouse_input(void* params);
 // update each cell in order to advance the simulation
 void update_cells();
 
-// toggle the cell's state, change the color accordingly
+// Toggle the cell's state, change the color accordingly
+void fill_cell_with(coord loc, rgb32 color);
+
+// Toggle with WHITE
 void let_there_be_light(coord loc);
 
-// set up the grid with an existing layout specified by a file
+// Toggle with BLACK
+void darkness_in_the_deep(coord loc);
+
+// Set up the grid with an existing layout specified by a file
 void load_grid(FILE * layout);
 
-rgb32 age_to_color(int age);
+// Clear the board and bitmap
+void clear_pixels();
+
+void add_glider(coord loc);
+
+
+
 
 #endif

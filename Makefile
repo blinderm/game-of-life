@@ -1,6 +1,6 @@
 CC := nvcc -arch sm_20
 
-CFLAGS := -g `sdl2-config --libs --cflags`
+CFLAGS := -g `sdl2-config --libs --cflags` -Wno-deprecated-gpu-targets
 
 all: life
 
