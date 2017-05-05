@@ -32,7 +32,7 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_reg
 
     // establish boundaries for checking neighbors
     int row = index / GRID_WIDTH;
-    int col = index % GRID_WIDTH;
+        int col = index % GRID_WIDTH;
 
     if (gpu_regions->get(row / REGION_DIM, col / REGION_DIM) > 0) {
         switch(gpu_neighbors->get(row, col)) {
@@ -209,14 +209,7 @@ void update_cells() {
         fprintf(stderr, "Failed to allocate regions grid on GPU\n");
         exit(2);
     }
-    /*
-    if (cudaMalloc(&gpu_regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) * (GRID_WIDTH/REGION_DIM)) != cudaSuccess) {
-        fprintf(stderr, "Failed to allocate regions board on GPU\n");
-        exit(2);
-    } */
-
-
-
+  
     // copy the CPU grid to the GPU grid
     if (cudaMemcpy(gpu_g, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid to the GPU\n");
@@ -299,7 +292,8 @@ void update_cells() {
     cudaFree(gpu_bmp);
     cudaFree(gpu_regions->board);
     cudaFree(gpu_regions);
-    
+
+    iterations++;
 }
 
 void fill_cell_with(coord loc, rgb32 color) {
@@ -421,9 +415,23 @@ int main(int argc, char ** argv) {
         perror("error in pthread_create.\n");
         exit(2);
     }
+    
+    // create file to export data
+    char* name = (char*) malloc(sizeof(char*));
+    sprintf(name, "%dTPB_%dDS.csv", THREADS_PER_BLOCK, DIM_SIZE);
+    FILE *data = fopen(name, "w");
+    if (data == NULL) {
+        printf("error in fopen\n");
+        exit(2);
+    }
+    fprintf(data, "threads_per_block,dim_size,num_iterations,time\n");
+
+    size_t start_time, end_time;
 
     // loop until we get a quit event
     while(running) {
+
+        start_time = time_ms();
 
         // process events
         while(SDL_PollEvent(&event) == 1) {

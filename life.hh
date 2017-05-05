@@ -136,6 +136,9 @@ rgb32 preset_colors[2] = {
     rgb32(255, 255, 255),
 };
 
+// iteration counter (for evaluations)
+int iterations = 0;s
+
 // indicate whether or not the simulation is paused
 bool paused = true;
 
