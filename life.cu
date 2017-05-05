@@ -55,6 +55,7 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_reg
                 break;
         }
 
+    
     }
 
 }
@@ -62,7 +63,7 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_reg
 
 // get input from the keyboard and execute proper command 
 void* get_keyboard_input(void* params) {
-   
+
     bool clear = false;
     bool pause = false;
     bool step = false;
@@ -179,75 +180,53 @@ void update_cells() {
     if (cudaMalloc(&gpu_g, sizeof(grid)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate grid on GPU\n");
         exit(2);
-    }
-
-    /*
-       if (cudaMalloc(gpu_g->board), sizeof(int) * GRID_HEIGHT * GRID_WIDTH)) != cudaSuccess) {
-       fprintf(stderr, "Failed to allocate grid board on GPU\n");
-       exit(2);
-       } */
-
-    // alocate space for GPU bitmap
+    } 
+    // allocate space for GPU bitmap
     bitmap* gpu_bmp;
     if (cudaMalloc(&gpu_bmp, sizeof(bitmap)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate bitmap on GPU\n");
         exit(2);
     }
-
-    // allocate space for neighbors
+    // allocate space for GPU neighbors
     grid* gpu_neighbors;
     if (cudaMalloc(&gpu_neighbors, sizeof(grid)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate grid on GPU\n");
         exit(2);
     }
-
-    // allocate space for neighbors
+    // allocate space for GPU regions
     reggrid* gpu_regions;
     if (cudaMalloc(&gpu_regions, sizeof(reggrid)) != cudaSuccess) {
         fprintf(stderr, "Failed to allocate regions grid on GPU\n");
         exit(2);
     }
-    /*
-       if (cudaMalloc(&gpu_regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) * (GRID_WIDTH/REGION_DIM)) != cudaSuccess) {
-       fprintf(stderr, "Failed to allocate regions board on GPU\n");
-       exit(2);
-       } */
-
-
-
+  
     // copy the CPU grid to the GPU grid
     if (cudaMemcpy(gpu_g, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid to the GPU\n");
     }
-
     // copy the CPU grid array to the GPU grid array
     if (cudaMemcpy(gpu_g->board, g->board, sizeof(int) * GRID_HEIGHT * GRID_WIDTH,
                 cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid array to the GPU\n");
     }
-
     // copy the CPU bitmap to the GPU bitmap
     if (cudaMemcpy(gpu_bmp, bmp, sizeof(bitmap), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy bitmap to the GPU\n");
     }
-
-    // copy the CPU neighbors grid to the GPU neighbors grid
+    // copy the CPU neighbors to the GPU neighbors 
     if (cudaMemcpy(gpu_neighbors, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy neighbors grid to the GPU\n");
     }
-
-    // copy the GPU regions grid to the GPU regions grid
+    // copy the GPU regions to the GPU regions 
     if (cudaMemcpy(gpu_regions, regions, sizeof(reggrid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid to the GPU\n");
     }
-
     // copy the CPU regions array to the GPU regions array
     if (cudaMemcpy(gpu_regions->board, regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) *
                 (GRID_WIDTH/REGION_DIM),  cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions array to the GPU\n");
     }
-
-
+    
     // number of block to run (rounding up to include all threads)
     size_t grid_blocks = (GRID_WIDTH*GRID_HEIGHT + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
@@ -260,29 +239,25 @@ void update_cells() {
     if (cudaMemcpy(g, gpu_g, sizeof(grid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid from the GPU\n");
     }
-
     // copy the GPU grid array back to the CPU
     if (cudaMemcpy(g->board, gpu_g->board, sizeof(int) * GRID_HEIGHT * GRID_WIDTH,
                 cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid array from the GPU\n");
     }
-
     // copy the GPU bitmap back to the CPU 
     if (cudaMemcpy(bmp, gpu_bmp, sizeof(bitmap), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy bitmap from the GPU\n");
     }
-
-    // copy the CPU regions grid to the GPU regions grid
+    // copy the CPU regions grid back to the CPU
     if (cudaMemcpy(regions, gpu_regions, sizeof(reggrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid from the GPU\n");
     }
-
-    // copy the GPU grid array back to the CPU
+    // copy the GPU regions array back to the CPU
     if (cudaMemcpy(regions->board, gpu_regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) *
                 (GRID_WIDTH/REGION_DIM), cudaMemcpyDeviceToHost) != cudaSuccess) {
-        fprintf(stderr, "Failed to regions grid array from the GPU\n");
+        fprintf(stderr, "Failed to copy regions grid array from the GPU\n");
     }
-
+  
     // loop over points in the bitmap to change color
     for(int row = 0; row < BMP_HEIGHT; row++){
         for(int col = 0; col < BMP_WIDTH; col++){
@@ -424,6 +399,20 @@ int main(int argc, char ** argv) {
         exit(2);
     }
 
+    // create file to export data
+    char* name = (char*) malloc(sizeof(char*));
+    sprintf(name, "%dTPB_%dDS.csv", THREADS_PER_BLOCK, REGION_DIM);
+    FILE *data = fopen(name, "w");
+    if (data == NULL) {
+        printf("error in fopen\n");
+        exit(2);
+    }
+    fprintf(data, "threads_per_block,dim_size,num_iterations,time\n");
+
+    size_t start_time, end_time;
+
+    int iterations = 0;
+    
     // loop until we get a quit event
     while(running) {
 
@@ -439,13 +428,19 @@ int main(int argc, char ** argv) {
         pthread_barrier_wait(&barrier); 
 
         if (!paused) {
+            start_time = time_ms();
             update_cells();
+            end_time = time_ms();
+            fprintf(data, "%d,%d,%Iu,%d\n", THREADS_PER_BLOCK, REGION_DIM,
+                    iterations++, end_time - start_time);
             sleep_ms(DELAY);
         }
 
         // display the rendered frame
         ui.display(*bmp);
     }
+
+    fclose(data);
 
     // join threads
     if (pthread_join(mouse_thread, NULL)) {
@@ -459,6 +454,7 @@ int main(int argc, char ** argv) {
 
     return 0;
 }
+
 
 void clear_pixels() {
     bmp->fill(preset_colors[BLACK]);
