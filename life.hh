@@ -31,9 +31,6 @@ using namespace std;
 // cell (on board) dimension
 #define CELL_DIM 10
 
-// region (for optimization) dimension
-#define REGION_DIM 10
-
 // threads per block
 #define THREADS_PER_BLOCK 64
 
@@ -69,31 +66,6 @@ struct grid {
     }
 };
 
-
-// grid struct for regions (optimizations)
-struct reggrid {
-    int board[(int) GRID_HEIGHT / REGION_DIM][(int) GRID_WIDTH / REGION_DIM];
-
-    reggrid(int val) { 
-        memset(board, val, sizeof(int) * (GRID_HEIGHT/REGION_DIM) * (GRID_WIDTH/REGION_DIM));
-    }
-
-    void fill(int value) {
-        memset(board, value, sizeof(int) * GRID_HEIGHT * GRID_WIDTH);
-    }
-    __host__ __device__ int get(int row, int col) {
-        return this->board[row][col];
-    }
-    __host__ __device__ void set(int row, int col, int value) {
-        this->board[row][col] = value;
-    }
-    __host__ __device__ void inc(int row, int col) {
-        this->board[row][col]++;
-    }
-    __host__ __device__ void dec(int row, int col) {
-        this->board[row][col]--;
-    }
-};
 
 // coordinate struct
 struct coord {

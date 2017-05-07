@@ -26,7 +26,7 @@ __global__ void count_neighbors(grid* gpu_g, grid* gpu_neighbors) {
 }
 
 // use Conway's update algorithm to decide whether or not to toggle cell 
-__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_regions) {
+__global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors) {
 
     size_t index = blockIdx.x * THREADS_PER_BLOCK + threadIdx.x;
 
@@ -34,29 +34,18 @@ __global__ void life_or_death(grid* gpu_g, grid* gpu_neighbors, reggrid* gpu_reg
     int row = index / GRID_WIDTH;
     int col = index % GRID_WIDTH;
 
-    // optimization: only update a region if there will be cells alive at next iteration
-    if (gpu_regions->get(row / REGION_DIM, col / REGION_DIM) > 0) {
-        switch(gpu_neighbors->get(row, col)) {
-            case 2: // alive cell stays alive; dead cell stays dead
-                if(gpu_g->get(row, col) > 0) { // alive cell stays alive
-                    gpu_g->inc(row, col);
-                }
-                break;
-            case 3: // alive cell stays alive; dead cell comes alive
-                if (gpu_g->get(row, col) == 0) { // dead cell comes alive
-                    gpu_regions->inc(row / REGION_DIM, col / REGION_DIM);
-                }
+    switch(gpu_neighbors->get(row, col)) {
+        case 2: // alive cell stays alive; dead cell stays dead
+            if(gpu_g->get(row, col) > 0) { // alive cell stays alive
                 gpu_g->inc(row, col);
-                break;
-            default: // alive cell dies; dead cell stays dead
-                if (gpu_g->get(row, col) > 0) { // alive cell dies
-                    gpu_regions->dec(row / REGION_DIM, col / REGION_DIM);
-                }
-                gpu_g->set(row, col, 0);
-                break;
-        }
-
-
+            }
+            break;
+        case 3: // alive cell stays alive; dead cell comes alive
+            gpu_g->inc(row, col);
+            break;
+        default: // alive cell dies; dead cell stays dead
+            gpu_g->set(row, col, 0);
+            break;
     }
 
 }
@@ -192,13 +181,7 @@ void update_cells() {
         fprintf(stderr, "Failed to allocate grid on GPU\n");
         exit(2);
     }
-    // allocate space for GPU regions
-    reggrid* gpu_regions;
-    if (cudaMalloc(&gpu_regions, sizeof(reggrid)) != cudaSuccess) {
-        fprintf(stderr, "Failed to allocate regions grid on GPU\n");
-        exit(2);
-    }
-
+  
     // copy the CPU grid to the GPU grid
     if (cudaMemcpy(gpu_g, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid to the GPU\n");
@@ -207,29 +190,21 @@ void update_cells() {
     if (cudaMemcpy(gpu_neighbors, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy neighbors grid to the GPU\n");
     }
-    // copy the GPU regions to the GPU regions 
-    if (cudaMemcpy(gpu_regions, regions, sizeof(reggrid), cudaMemcpyHostToDevice) != cudaSuccess) {
-        fprintf(stderr, "Failed to copy regions grid to the GPU\n");
-    }
 
     // number of block to run (rounding up to include all threads)
     size_t grid_blocks = (GRID_WIDTH*GRID_HEIGHT + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
     count_neighbors<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
     cudaDeviceSynchronize();
-    life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors, gpu_regions);
+    life_or_death<<<grid_blocks, THREADS_PER_BLOCK>>>(gpu_g, gpu_neighbors);
     cudaDeviceSynchronize();
 
     // copy the GPU grid back to the CPU
     if (cudaMemcpy(g, gpu_g, sizeof(grid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid from the GPU\n");
     }    
-    // copy the CPU regions grid back to the CPU
-    if (cudaMemcpy(regions, gpu_regions, sizeof(reggrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
-        fprintf(stderr, "Failed to copy regions grid from the GPU\n");
-    }
 
-        // loop over points in the bitmap to change color
+    // loop over points in the bitmap to change color
     for(int row = 0; row < BMP_HEIGHT; row++){
         for(int col = 0; col < BMP_WIDTH; col++){
             rgb32 color = age_to_color(g->get(row / CELL_DIM, col / CELL_DIM));
@@ -240,9 +215,6 @@ void update_cells() {
     // free everything we malloc'ed
     cudaFree(gpu_g->board);
     cudaFree(gpu_g);
-    cudaFree(gpu_regions->board);
-    cudaFree(gpu_regions);
-
 }
 
 // fill an entire cell with the given color
@@ -264,9 +236,6 @@ void fill_cell_with(coord loc, rgb32 color) {
 void let_there_be_light(coord loc) {
 
     g->set(loc.y/CELL_DIM, loc.x/CELL_DIM, 1);
-    regions->inc((loc.y/CELL_DIM)/REGION_DIM, 
-            (loc.x/REGION_DIM)/REGION_DIM);
-
     fill_cell_with(loc, colors[0]);
 }
 
@@ -274,9 +243,6 @@ void let_there_be_light(coord loc) {
 void darkness_in_the_deep(coord loc) {
 
     g->set(loc.y/CELL_DIM, loc.x/CELL_DIM, 0);
-    regions->dec((loc.y/CELL_DIM)/REGION_DIM, 
-            (loc.x/REGION_DIM)/REGION_DIM);
-
     fill_cell_with(loc, preset_colors[BLACK]);
 }
 
@@ -344,10 +310,6 @@ int main(int argc, char ** argv) {
     grid grd(0);
     g = &grd;
 
-    // Create the regions grid (for optimization)
-    reggrid rgns(0);
-    regions = &rgns;
-
     // load grid from file specified by user where appropriate
     if (argc > 1) {
         FILE * fp;
@@ -380,14 +342,14 @@ int main(int argc, char ** argv) {
     }
 
     // create file to export evaluations data
-    char* name = (char*) malloc(sizeof(char*));
-    sprintf(name, "%dTPB_%dDS.csv", THREADS_PER_BLOCK, REGION_DIM);
+    char name[30];
+    sprintf(name, "data/%dTPB_0RD.csv", THREADS_PER_BLOCK);
     FILE *data = fopen(name, "w");
     if (data == NULL) {
         printf("error in fopen\n");
         exit(2);
     }
-    fprintf(data, "threads_per_block,dim_size,num_iterations,time\n");
+    fprintf(data, "threads_per_block,region_dim,num_iterations,time\n");
 
     size_t start_time, end_time;
 
@@ -412,7 +374,7 @@ int main(int argc, char ** argv) {
             start_time = time_ms();
             update_cells();
             end_time = time_ms();
-            fprintf(data, "%d,%d,%Iu,%d\n", THREADS_PER_BLOCK, REGION_DIM,
+            fprintf(data, "%d,0,%Iu,%d\n", THREADS_PER_BLOCK,
                     iterations++, end_time - start_time);
             sleep_ms(DELAY);
         }
