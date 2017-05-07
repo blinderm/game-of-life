@@ -1,5 +1,7 @@
 - project
     - merge/refine/refactor/comment
+        - giant switch statement?
+        - order of functions?
     - the README (including ``sample run")
     - re-run the tests? figure out what the heck is happening with these results
 

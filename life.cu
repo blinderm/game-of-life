@@ -186,13 +186,6 @@ void update_cells() {
         fprintf(stderr, "Failed to allocate grid on GPU\n");
         exit(2);
     }
-    /*
-    // allocate space for GPU bitmap
-    bitmap* gpu_bmp;
-    if (cudaMalloc(&gpu_bmp, sizeof(bitmap)) != cudaSuccess) {
-        fprintf(stderr, "Failed to allocate bitmap on GPU\n");
-        exit(2);
-    }*/
     // allocate space for GPU neighbors
     grid* gpu_neighbors;
     if (cudaMalloc(&gpu_neighbors, sizeof(grid)) != cudaSuccess) {
@@ -209,16 +202,7 @@ void update_cells() {
     // copy the CPU grid to the GPU grid
     if (cudaMemcpy(gpu_g, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid to the GPU\n");
-    }/*
-    // copy the CPU grid array to the GPU grid array
-    if (cudaMemcpy(gpu_g->board, g->board, sizeof(int) * GRID_HEIGHT * GRID_WIDTH,
-                cudaMemcpyHostToDevice) != cudaSuccess) {
-        fprintf(stderr, "Failed to copy grid array to the GPU\n");
-    }/
-    // copy the CPU bitmap to the GPU bitmap
-    if (cudaMemcpy(gpu_bmp, bmp, sizeof(bitmap), cudaMemcpyHostToDevice) != cudaSuccess) {
-        fprintf(stderr, "Failed to copy bitmap to the GPU\n");
-    }*/
+    }
     // copy the CPU neighbors to the GPU neighbors 
     if (cudaMemcpy(gpu_neighbors, g, sizeof(grid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy neighbors grid to the GPU\n");
@@ -226,12 +210,7 @@ void update_cells() {
     // copy the GPU regions to the GPU regions 
     if (cudaMemcpy(gpu_regions, regions, sizeof(reggrid), cudaMemcpyHostToDevice) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid to the GPU\n");
-    }/*
-    // copy the CPU regions array to the GPU regions array
-    if (cudaMemcpy(gpu_regions->board, regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) *
-                (GRID_WIDTH/REGION_DIM),  cudaMemcpyHostToDevice) != cudaSuccess) {
-        fprintf(stderr, "Failed to copy regions array to the GPU\n");
-    }*/
+    }
 
     // number of block to run (rounding up to include all threads)
     size_t grid_blocks = (GRID_WIDTH*GRID_HEIGHT + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
@@ -244,25 +223,11 @@ void update_cells() {
     // copy the GPU grid back to the CPU
     if (cudaMemcpy(g, gpu_g, sizeof(grid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy grid from the GPU\n");
-    }/*
-    // copy the GPU grid array back to the CPU
-    if (cudaMemcpy(g->board, gpu_g->board, sizeof(int) * GRID_HEIGHT * GRID_WIDTH,
-                cudaMemcpyDeviceToHost) != cudaSuccess) {
-        fprintf(stderr, "Failed to copy grid array from the GPU\n");
     }
-    // copy the GPU bitmap back to the CPU 
-    if (cudaMemcpy(bmp, gpu_bmp, sizeof(bitmap), cudaMemcpyDeviceToHost) != cudaSuccess) {
-        fprintf(stderr, "Failed to copy bitmap from the GPU\n");
-    }*/
-    // copy the CPU regions grid back to the CPU
+    // copy the GPU regions grid back to the CPU
     if (cudaMemcpy(regions, gpu_regions, sizeof(reggrid), cudaMemcpyDeviceToHost) != cudaSuccess) {
         fprintf(stderr, "Failed to copy regions grid from the GPU\n");
-    }/*
-    // copy the GPU regions array back to the CPU
-    if (cudaMemcpy(regions->board, gpu_regions->board, sizeof(int) * (GRID_HEIGHT/REGION_DIM) *
-                (GRID_WIDTH/REGION_DIM), cudaMemcpyDeviceToHost) != cudaSuccess) {
-        fprintf(stderr, "Failed to copy regions grid array from the GPU\n");
-    }*/
+    }
 
     // loop over points in the bitmap to change color
     for(int row = 0; row < BMP_HEIGHT; row++){
@@ -275,7 +240,6 @@ void update_cells() {
     // free everything we malloc'ed
     cudaFree(gpu_g->board);
     cudaFree(gpu_g);
-   // cudaFree(gpu_bmp);
     cudaFree(gpu_regions->board);
     cudaFree(gpu_regions);
 
@@ -415,7 +379,7 @@ int main(int argc, char ** argv) {
         exit(2);
     }
 
-    // create file to export evaluations data
+    // create file to export evaluations data (ONLY HERE BECAUSE BRANCHING. DELETE LATER. LOOK HOW LONG AND TERRIBLE THIS LINE IS YOU HAVE TO NOTICE IT.  AND ONCE YOU NOTICE IT YOYU HAVE TO DELTE ALL MENTION OF THESE SORTS OF FILES FROM MASTER.
     char* name = (char*) malloc(sizeof(char*));
     sprintf(name, "%dTPB_%dDS.csv", THREADS_PER_BLOCK, REGION_DIM);
     FILE *data = fopen(name, "w");
@@ -448,8 +412,8 @@ int main(int argc, char ** argv) {
             start_time = time_ms();
             update_cells();
             end_time = time_ms();
-            fprintf(data, "%d,%d,%Iu,%d\n", THREADS_PER_BLOCK, REGION_DIM,
-                    iterations++, end_time - start_time);
+            //fprintf(data, "%d,%d,%Iu,%d\n", THREADS_PER_BLOCK, REGION_DIM,
+            //        iterations++, end_time - start_time);
             sleep_ms(DELAY);
         }
 
