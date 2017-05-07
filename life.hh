@@ -21,8 +21,8 @@
 using namespace std;
 
 // screen (bitmap) size
-#define BMP_WIDTH 400
-#define BMP_HEIGHT 300
+#define BMP_WIDTH 800
+#define BMP_HEIGHT 600
 
 // grid (board) size
 #define GRID_WIDTH ((BMP_WIDTH)/(CELL_DIM))
@@ -32,7 +32,7 @@ using namespace std;
 #define CELL_DIM 10
 
 // threads per block
-#define THREADS_PER_BLOCK 64
+#define THREADS_PER_BLOCK 256
 
 // update delay
 #define DELAY 25
