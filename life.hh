@@ -20,18 +20,18 @@
 
 using namespace std;
 
-// screen size
+// screen (bitmap) size
 #define BMP_WIDTH 1200
 #define BMP_HEIGHT 800
 
-// cell dimension
-#define CELL_DIM 10
-
-// grid size
+// grid (board) size
 #define GRID_WIDTH ((BMP_WIDTH)/(CELL_DIM))
 #define GRID_HEIGHT ((BMP_HEIGHT)/(CELL_DIM))
 
-// region dimension
+// cell (on board) dimension
+#define CELL_DIM 10
+
+// region (for optimization) dimension
 #define REGION_DIM 10
 
 // threads per block
@@ -40,7 +40,7 @@ using namespace std;
 // update delay
 #define DELAY 25
 
-// barrier for threads
+// barrier for listener threads
 static pthread_barrier_t barrier;
 
 // grid struct for board (cells)
@@ -162,7 +162,7 @@ void* get_mouse_input(void* params);
 // update each cell in order to advance the simulation
 void update_cells();
 
-// toggle the cell's state, change the color accordingly
+// fill an entire cell with the given color
 void fill_cell_with(coord loc, rgb32 color);
 
 // toggle cell with WHITE
