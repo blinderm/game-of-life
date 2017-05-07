@@ -380,8 +380,8 @@ int main(int argc, char ** argv) {
     }
 
     // create file to export evaluations data (ONLY HERE BECAUSE BRANCHING. DELETE LATER. LOOK HOW LONG AND TERRIBLE THIS LINE IS YOU HAVE TO NOTICE IT.  AND ONCE YOU NOTICE IT YOYU HAVE TO DELTE ALL MENTION OF THESE SORTS OF FILES FROM MASTER.
-    char* name = (char*) malloc(sizeof(char*));
-    sprintf(name, "%dTPB_%dRD.csv", THREADS_PER_BLOCK, REGION_DIM);
+    char name[30];
+    sprintf(name, "data/%dTPB_%dRD.csv", THREADS_PER_BLOCK, REGION_DIM);
     FILE *data = fopen(name, "w");
     if (data == NULL) {
         printf("error in fopen\n");
