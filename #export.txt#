@@ -1,0 +1,3 @@
+char name[30];
+sprintf(name, "data/wat.csv");
+FILE *data = fopen(name, "w");
