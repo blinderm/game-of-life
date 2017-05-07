@@ -381,13 +381,13 @@ int main(int argc, char ** argv) {
 
     // create file to export evaluations data (ONLY HERE BECAUSE BRANCHING. DELETE LATER. LOOK HOW LONG AND TERRIBLE THIS LINE IS YOU HAVE TO NOTICE IT.  AND ONCE YOU NOTICE IT YOYU HAVE TO DELTE ALL MENTION OF THESE SORTS OF FILES FROM MASTER.
     char* name = (char*) malloc(sizeof(char*));
-    sprintf(name, "%dTPB_%dDS.csv", THREADS_PER_BLOCK, REGION_DIM);
+    sprintf(name, "%dTPB_%dRD.csv", THREADS_PER_BLOCK, REGION_DIM);
     FILE *data = fopen(name, "w");
     if (data == NULL) {
         printf("error in fopen\n");
         exit(2);
     }
-    fprintf(data, "threads_per_block,dim_size,num_iterations,time\n");
+    fprintf(data, "threads_per_block,region_dim,num_iterations,time\n");
 
     size_t start_time, end_time;
 
@@ -412,8 +412,8 @@ int main(int argc, char ** argv) {
             start_time = time_ms();
             update_cells();
             end_time = time_ms();
-            //fprintf(data, "%d,%d,%Iu,%d\n", THREADS_PER_BLOCK, REGION_DIM,
-            //        iterations++, end_time - start_time);
+            fprintf(data, "%d,%d,%Iu,%d\n", THREADS_PER_BLOCK, REGION_DIM,
+                    iterations++, end_time - start_time);
             sleep_ms(DELAY);
         }
 
