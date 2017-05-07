@@ -94,21 +94,18 @@ void* get_keyboard_input(void* params) {
                     case SDL_SCANCODE_C:
                         if (clear) {
                             clear_pixels();
-                            puts("Cleared");
                             clear = false;
                         }
                         break;
                     case SDL_SCANCODE_G:
                         if (glider) {
                             add_glider(args->loc);
-                            puts("Glider");
                             glider = false;
                         }
                         break;
                     case SDL_SCANCODE_P:
                         if (pause) {
                             paused = !(paused);
-                            puts("Pause toggle!");
                             pause = false;
                         }
                         break;
@@ -313,7 +310,7 @@ int main(int argc, char ** argv) {
 
     // create file to export evaluations data (ONLY HERE BECAUSE BRANCHING. DELETE LATER. LOOK HOW LONG AND TERRIBLE THIS LINE IS YOU HAVE TO NOTICE IT.  AND ONCE YOU NOTICE IT YOYU HAVE TO DELTE ALL MENTION OF THESE SORTS OF FILES FROM MASTER.
     char name[30];
-    sprintf(name, "0TPB_0DS.csv");
+    sprintf(name, "data/0TPB_0DS.csv");
     FILE *data = fopen(name, "w");
     if (data == NULL) {
         printf("error in fopen\n");
@@ -346,6 +343,10 @@ int main(int argc, char ** argv) {
             end_time = time_ms();
             fprintf(data, "0,0,%Iu,%d\n", iterations++, end_time - start_time);
             sleep_ms(DELAY);
+        }
+
+        if (iterations > 1000) {
+            puts("Over 1000");
         }
 
         // display the rendered frame
