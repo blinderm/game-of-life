@@ -104,21 +104,18 @@ void* get_keyboard_input(void* params) {
                     case SDL_SCANCODE_C:
                         if (clear) {
                             clear_pixels();
-                            puts("Cleared");
                             clear = false;
                         }
                         break;
                     case SDL_SCANCODE_G:
                         if (glider) {
                             add_glider(args->loc);
-                            puts("Glider");
                             glider = false;
                         }
                         break;
                     case SDL_SCANCODE_P:
                         if (pause) {
                             paused = !(paused);
-                            puts("Pause toggle!");
                             pause = false;
                         }
                         break;
