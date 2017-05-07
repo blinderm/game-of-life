@@ -417,8 +417,13 @@ int main(int argc, char ** argv) {
             sleep_ms(DELAY);
         }
 
+        if (iterations > 1000) {
+           puts("Over 1000");
+        }
+
         // display the rendered frame
         ui.display(*bmp);
+        
     }
 
     fclose(data);

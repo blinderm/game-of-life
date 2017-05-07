@@ -21,8 +21,8 @@
 using namespace std;
 
 // screen (bitmap) size
-#define BMP_WIDTH 1200
-#define BMP_HEIGHT 800
+#define BMP_WIDTH 400
+#define BMP_HEIGHT 300
 
 // grid (board) size
 #define GRID_WIDTH ((BMP_WIDTH)/(CELL_DIM))
