@@ -345,7 +345,7 @@ int main(int argc, char ** argv) {
             sleep_ms(DELAY);
         }
 
-        if (iterations > 1000) {
+        if (iterations > 1000 && TESTING) {
             puts("Over 1000");
         }
 

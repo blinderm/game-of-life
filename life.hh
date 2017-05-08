@@ -34,6 +34,9 @@ using namespace std;
 // update delay
 #define DELAY 25
 
+// Turns on print statements for testing
+#define TESTING true
+
 // barrier for listener threads
 static pthread_barrier_t barrier;
 
