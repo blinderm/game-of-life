@@ -1,5 +1,6 @@
 import pandas as pd
 from scipy import stats
+import matplotlib.pyplot as plt
 
 threads_per_block = [2**6]
 region_dim = [0, 10]
@@ -18,14 +19,35 @@ results = [[stats.ttest_ind(d_i, d_j) for d_i in flattened] for d_j in flattened
 
 threshold = 0.05
 
-print("Insignificant results:")
 for (i, row) in enumerate(results):
     for (j, col) in enumerate(row):
-        if i < j and col[1] >= threshold:
-            print(("({}) vs ({}).\n"
-                "t-statistic: {:+1.3f},\n"
-                "p-val: {:1.4e}.\n").format(flattened[i].name,
-                    flattened[j].name,
-                    float(col[0]),
-                    col[1])) 
+        print(
+                ("({0:}) vs ({1:}).\n"
+                    "t-statistic: {2:+1.3f},\n"
+                    "p-val: {3:1.4e},\n"
+                    "mu_{4:}: {5:1.2f}, mu_{6:}: {7:1.2f}.\n"
+                    ).format(flattened[i].name,
+                        flattened[j].name,
+                        float(col[0]),
+                        col[1],
+                        i, flattened[i].mean(),
+                        j, flattened[j].mean()
+                        )
+                    ) 
+
+shape = (len(sizes), len(region_dim))
+
+fig, axes = plt.subplots(*shape, )
+
+for i in range(len(sizes)):
+    for j in range(len(region_dim)):
+        axes[i,j].hist(data[i][j][0], bins=50, normed=True, 
+                label=data[i][j][0].name, align='mid')
+        axes[i,j].legend()
+plt.show()
+
+
+
+
+
 
