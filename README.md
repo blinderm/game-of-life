@@ -55,7 +55,14 @@ for the program is
 $ ./life boards/sample.board
 ```
 
-## Specific Example 
+<sup>1</sup>The glider is a pattern that steadily traverses the board: 
+![Glider pattern](https://upload.wikimedia.org/wikipedia/commons/f/f2/Game_of_life_animated_glider.gif)
+
+<sup>2</sup>The glider gun is a pattern that steadily produces gliders:
+![Glider gun
+pattern](https://upload.wikimedia.org/wikipedia/commons/e/e5/Gospers_glider_gun.gif)
+
+# Specific Example 
 
 In this example we will explore the glider gun<sup>2</sup> pattern. The file
 `gun.board` is provided in the `boards` directory. We load the board into the
@@ -113,13 +120,8 @@ Oh no, our glider gun exploded! Oh well...
 
 This is the steady state of our game of life. It's kind of sad, but still neat.
 
+# Navigating the repository
 
-<sup>1</sup>The glider is a pattern that steadily traverses the board: 
-![Glider pattern](https://upload.wikimedia.org/wikipedia/commons/f/f2/Game_of_life_animated_glider.gif)
-
-<sup>2</sup>The glider gun is a pattern that steadily produces gliders:
-![Glider gun
-pattern](https://upload.wikimedia.org/wikipedia/commons/e/e5/Gospers_glider_gun.gif)
 
 
 
