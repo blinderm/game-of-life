@@ -1,16 +1,22 @@
-To show that your system works, you must provide a README file that precisely
-describes the basic use of your system, including both general instructions and
-a specific example that walks through an interaction with the system and the
-expected output. Your implementation must also include all necessary source and
-data files and a Makefile that allows me to build your project with the make
-command.
-
-
-
 # CSC 213 &ndash; Final Project
 
 Anna Blinderman, David Kraemer, Zachary Segall
 
+We built a version of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway's_Game_of_Life). 
+Conway's Game of Life is a cellular automata simulation invented by
+the mathematician John Conway in 1970. It was originally devised to
+solve problems relating to Turing and Von Neumann machines, 
+but has been used in a variety of fields since then. 
+Conway's Game of Life is a particularly salient example of complex systems
+emerging from a simple set of rules. 
+It acts as a basic population growth model - a cell's state is determined by its neighbors
+(from wikipedia):
+1. Any live cell with fewer than two live neighbours dies, by underpopulation.
+2. Any live cell with two or three live neighbours lives on to the next generation.
+3. Any live cell with more than three live neighbours dies, by overpopulation.
+4. Any dead cell with three live neighbours becomes a live cell, by reproduction.
+We also added extra features to the basic implementation of the game, described below.
+ 
 # General Instructions 
 
 This guide assumes that the executable file `life` exists at the root of the
@@ -44,6 +50,17 @@ interface:
 | `CTRL-G` | Populates the region of cells where the mouse is located with a glider<sup>1</sup> cell. |
 | `CTRL-Q` | Quits the simulation (and exits the SDL window). |
 | `CTRL-SPACE` | Advances one step through the simulation (only valid when in pause mode). |
+
+## Adjustable settings
+
+The parameters for the simulation can be adjusted from the life.hh file:
+
+| Variable | Description |
+|:--------|:------------|
+| `BMP_WIDTH, BMP_HEIGHT` | Dimensions of display in pixels |
+| `CELL_DIM` | Size of cells in pixels |
+| `DELAY` | Time in ms between updates. |
+| `colors` | Cells change color based on age. There is an array of colors that determines endpoints and interpolation |
 
 ## Loading preset boards
 
@@ -120,6 +137,26 @@ This is the steady state of our game of life. It's kind of sad, but still neat.
 <sup>2</sup>The glider gun is a pattern that steadily produces gliders:
 ![Glider gun
 pattern](https://upload.wikimedia.org/wikipedia/commons/e/e5/Gospers_glider_gun.gif)
+
+## Other Branches - Evaluations
+
+In order to evaluate the effectiveness of our parallelization, we implemented a number of variations of our program. We have three categories, each of which is in one of the following branches. We also create a csv file to hold the THREADS_PER_BLOCK, REGION_SIZE, number of iterations completed, and time for most recent update (in ms) in each of these branches. Thus, when we run any of this code, we create a data file for our analysis. 
+
+### evaluations_serial: 
+
+We also implemented a serial version of our update function in order to gauge the effectiveness of our GPU parallelization. The code in this branch is otherwise identical to that in our main implementation. 
+
+
+### evaluations_parallel: 
+
+This is the same implementation as in our master branch.
+
+
+### evaluations_parallel_optimized: 
+
+Because it is sometimes the case that large regions of our board have no live cells in them, it is wasteful to run our update function on those regions. Thus, we overlaid a lower-dimension grid over our board in order to track the number of live cells in each region. If there are no live cells in the region, we do not run the update function on any of the cells within it. Although there are a few edge cases for which this optimization does not account (there could be live cells on the border of a region that would cause a cell within the region to come alive at the next iteration), this test was still useful in gauging the effectiveness of this optimization.
+
+
 
 
 
