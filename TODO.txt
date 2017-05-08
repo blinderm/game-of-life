@@ -3,10 +3,6 @@
         - giant switch statement?
         - order of functions?
     - the README (including ``sample run")
-    - re-run the tests? figure out what the heck is happening with these results
-        - evaluations_serial: 1 (the only possible one)
-        - evaluations_parallel: 5 (TPB 2^i for i=4...8)
-        - evaluations_parallel_optimized: 10 (TPB 2^i for i=4...8, RD 5*j for j=1,10)
 
 - presentation
     - evaluations/figures. presupposes we have figured out what the heck is happening with our test result

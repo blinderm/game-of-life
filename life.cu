@@ -250,19 +250,19 @@ void darkness_in_the_deep(coord loc) {
 // set up the grid with an existing layout specified by a file
 void load_grid(FILE * layout) {
     coord loc;
-    loc.x = 0, loc.y = 0;
+    loc.x = 1, loc.y = 1;
     char ch;
 
     while ((ch = getc(layout)) != EOF) {
         if (ch == '\n') {
-            loc.x = 0;
-            loc.y ++;
+            loc.x = 1;
+            loc.y += CELL_DIM;
         }
         else {
             if (ch != ' ') {
                 let_there_be_light(loc);
             }
-            loc.x ++;
+            loc.x += CELL_DIM;
         }
     }
 }
