@@ -5,6 +5,7 @@
 \usepackage{mathrsfs}
 \usepackage{listings} 
 \usepackage{color}
+\usepackage{ulem}
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{tikz}
@@ -21,7 +22,11 @@
 \newcommand{\nth}{^{\text{th}}}
 \newcommand{\mybegit}{\vspace{-2mm} \begin{itemize} \itemsep-.6em }
 \newcommand{\mytitle}[1]{\vspace{10mm} \noindent\begin{large} \textbf{{#1}} \end{large}} 
-
+\newcommand{\soutt}[1]{%
+    \renewcommand{\ULthickness}{1.0pt}%
+       \sout{#1}%
+    \renewcommand{\ULthickness}{.4pt}% Resetting to ulem default
+}
 
 
 
@@ -145,17 +150,17 @@
 
 
 \mybegit
-	\item describe experimental setup (Anna)
+	\item describe experimental setup 
 		\mybegit
-			\item hardware 
-			\item software (libraries)
-			\item data-gathering methods
+			\item hardware (???) 
+			\item software (libraries) (friend?)
+			\item \soutt{data-gathering methods (Anna)}
 		\end{itemize}
-	\item explain what trying to measure (speedup)  (Anna)
+	\item \soutt{ explain what trying to measure (speedup)  (Anna)}
 		\mybegit
-			\item vary block size
-			\item implement thing that only updates regions with living things? 
-			\item implement serial version? 
+			\item \soutt{vary block size}
+			\item \soutt{implement thing that only updates regions with living things?}
+			\item \soutt{implement serial version?}
 		\end{itemize}
 	\item include at least one graph with at least 8 data points [friend]
 	\item discuss interpretation of results [friend]	
@@ -163,9 +168,19 @@
 
 
 
+[HEY DAVIS CAN YOU 
 
 
 
+    In addition to ensuring that our implementation properly reflected Conway's rules, we verify that the concurrent components of our system function properly. For our listener threads on the CPU, we notice from running many tests that the program's response to user input is both immediate and correct. 
+    
+    However, the speed of our program is our main focus in our evaluations. As a benchmark, we implement a serial version of each of our GPU kernel functions involved in the advancement of our simulation from one iteration to the next. In order to test the efficiency of our parallelized program against that of the serial version, we create a file and use \texttt{time\_ms} to measure the running time of our update function and write that information to the file. 
+    
+    For our serial implementation, we loop over every cell in our grid to count the number of its neighbors that are alive. Then we apply Conway's algorithm to decide what its state will be at the next iteration. Finally, we loop over each pixel in our bitmap in order to correctly render these updates to the screen. Our parallel implementation is similar, although we count neighbors and update our cell grid using blocks of threads. 
+
+    We ran 1000 iterations of our serially-implemented simulation and collected the running time of each of the 1000 updates in a file. We did five similar runs for our parallel implementation, testing threads per block values of 16, 32, 64, 128, and 256.
+
+    While running our simulations, we noticed a possible way to speed up our code further: because there are oftentimes large regions of the board in which there are no live cells, we can know that there is no need to check for updates in such regions. Thus, running the kernel function on those cells is computationally wasteful. In order to reduce the effects of this inefficiency, we overlay yet another grid onto our board. This ``regions" grid, which is of lower dimension than our grid of cells, holds the a count of the number of live cells within its boundaries. We then modify our GPU kernels so that they only run the main body on cells that are in regions with at least one live cell. We again run 1000 iterations of this program, testing all ten combinations of the five threads per block values from above and a ``region" dimension of either 5 or 50. We note that we ignore edge cases (within a region, we must actually check the entirety of the region as well as another layer of cells surrounding it in order to ensure no cell within the region will be updated), so these tests report a lower runtime for our optimized runs than they would if our optimization were implemented perfectly (properly? but like lol we wouldn't wanna sound improper now would we)
 
 
 \end{document}
