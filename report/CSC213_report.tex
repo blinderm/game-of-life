@@ -50,7 +50,7 @@
 	
 	[TRANSITION] Life is simply a series of iterations of a rendering of a grid of cells, all of which are either dead or alive. Each cell's state is determined by the states of its direct neighbors. Life provides an interesting basic model for population growth and is an ideal demonstration of complex systems arising from simple rules. 
 
-	[davis can you please write the paragraph on the ui don't you read through libraries in your spare time or something]
+	[friend can you please write the paragraph on the ui don't you read through libraries in your spare time or something]
 	
 	For each iteration, we use Conway's algorithm to determine the state (dead or alive) of every cell in our grid. Because this algorithm takes as input a cell along with the states of each of its eight immediate neighbors, this algorithm naturally lends itself to an ``embarrasingly parallel" stencil computation on the GPU.
 	
@@ -58,13 +58,13 @@
 	
 	To evaluate our system, we first varied the number of threads per block in our stencil function calls. Then, we implemented a feature that allowed us to find regions with no live cells in order to skip their calls to the update functions. 
 	
-	[LOL SUMMARY OF RESULTS WHAT HAPPENED?!?!?]
+	[LOL SUMMARY OF RESULTS WHAT HAPPENED?!?!?] [friend]
 
 
 
 
 
-\newpage\mytitle{Design and Implementation ($\sim$2 pages)}
+\newpage\mytitle{Design and Implementation ($\sim$2 pages)} (Zachary)
 \mybegit
 	\item summary of overall implementation structure
 	\item Component 1: GUI
@@ -142,21 +142,20 @@
 
 
 \mybegit
-	\item describe experimental setup 
+	\item describe experimental setup (Anna)
 		\mybegit
 			\item hardware 
 			\item software (libraries)
 			\item data-gathering methods
 		\end{itemize}
-	\item explain what trying to measure (speedup) 
+	\item explain what trying to measure (speedup)  (Anna)
 		\mybegit
 			\item vary block size
 			\item implement thing that only updates regions with living things? 
 			\item implement serial version? 
 		\end{itemize}
-	\item include at least one graph with at least 8 data points
-	\item discuss interpretation of results
-	
+	\item include at least one graph with at least 8 data points [friend]
+	\item discuss interpretation of results [friend]	
 \end{itemize}
 
 
