@@ -150,10 +150,10 @@
 
 
 \mybegit
-	\item describe experimental setup 
+	\item \soutt{describe experimental setup (Anna)}
 		\mybegit
-			\item hardware (???) 
-			\item software (libraries) (friend?)
+			\item \soutt{hardware (???)}
+			\item \soutt{software (libraries)}
 			\item \soutt{data-gathering methods (Anna)}
 		\end{itemize}
 	\item \soutt{ explain what trying to measure (speedup)  (Anna)}
@@ -168,9 +168,9 @@
 
 
 
-[HEY DAVIS CAN YOU 
-
-
+    The hardware needed to run our evaluations is the same as that which is needed to run our program in general: a computer with an Nvidia GPU (and SDL installed and also yknow a monetor and keyboard and mouse gah what do you want from me char star)
+    
+    For our statistical analysis and production of graphs, we use \texttt{Python}, specifically with the \texttt{pandas} library to hold our data, the \texttt{numpy} package to run our analyses, and the \texttt{matplotlib} library to produce our figures.  
 
     In addition to ensuring that our implementation properly reflected Conway's rules, we verify that the concurrent components of our system function properly. For our listener threads on the CPU, we notice from running many tests that the program's response to user input is both immediate and correct. 
     
