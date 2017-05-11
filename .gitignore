@@ -1,6 +1,16 @@
 sites
 *.d
 
+# Python
+scripts/*.ipynb_checkpoints/
+
+# TeX
+report/*.aux
+report/*.pdf
+report/*.log
+report/*.out
+report/*.synctex.gz
+
 # Object files
 *.o
 *.ko
