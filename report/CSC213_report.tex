@@ -10,7 +10,6 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{tikz}
-\begin{document}
 %\pagenumbering{gobble}
 \setlength{\parindent}{3em}
 \setlength{\parskip}{1em}
@@ -21,7 +20,9 @@
 \newcommand{\lspc}{\hspace{10mm}}
 \newcommand{\ttc}{, \ttspc}
 \newcommand{\nth}{^{\text{th}}}
+
 \newcommand{\mybegit}{\vspace{-2mm} \begin{itemize} \itemsep-.6em }
+
 \newcommand{\mytitle}[1]{\vspace{10mm} \noindent\begin{large} \textbf{{#1}} \end{large}} 
 \newcommand{\soutt}[1]{%
     \renewcommand{\ULthickness}{1.0pt}%
@@ -29,13 +30,20 @@
     \renewcommand{\ULthickness}{.4pt}% Resetting to ulem default
 }
 
+\title{Final Project Report}
+\author{Anna Blinderman, David Kraemer, Zachary Segall}
+\date{May 12 2017}
 
 
-\begin{center}
-\begin{Large} \textbf{CSC-213: PROF. CURTSINGER} \\
-\vspace{3mm} \textbf{FINAL PROJECT REPORT} \end{Large} \\
-\vspace{5mm} ANNA BLINDERMAN, DAVID KRAEMER, ZACHARY SEGALL
-\end{center} 
+\begin{document}
+
+\maketitle
+
+% \begin{center}
+% \begin{Large} \textbf{CSC-213: PROF. CURTSINGER} \\
+% \vspace{3mm} \textbf{FINAL PROJECT REPORT} \end{Large} \\
+% \vspace{5mm} ANNA BLINDERMAN, DAVID KRAEMER, ZACHARY SEGALL
+% \end{center} 
 
 \mytitle{Project Overview ($<$400 words)}
 \mybegit
@@ -183,25 +191,59 @@
 
     While running our simulations, we noticed a possible way to speed up our code further: because there are oftentimes large regions of the board in which there are no live cells, we can know that there is no need to check for updates in such regions. Thus, running the kernel function on those cells is computationally wasteful. In order to reduce the effects of this inefficiency, we overlay yet another grid onto our board. This ``regions" grid, which is of lower dimension than our grid of cells, holds the a count of the number of live cells within its boundaries. We then modify our GPU kernels so that they only run the main body on cells that are in regions with at least one live cell. We again run 1000 iterations of this program, testing all ten combinations of the five threads per block values from above and a ``region" dimension of either 5 or 50. We note that we ignore edge cases (within a region, we must actually check the entirety of the region as well as another layer of cells surrounding it in order to ensure no cell within the region will be updated), so these tests report a lower runtime for our optimized runs than they would if our optimization were implemented perfectly (properly? but like lol we wouldn't wanna sound improper now would we)
 
+    Before proceeding to the experimental analysis, we removed a consistent
+    outlier from the results of each configuration, which was always the first
+    update. There is likely additional startup costs to the initial GPU setup
+    which is captured in the first run of the update, which is true across each
+    configuration. We perform a statistical test to decide the significance in
+    the mean time to update between any two configurations. Since the
+    populations appear to be, very roughly, approxmating a normal distribution,
+    and because we have no prior information about the parameters of the
+    distribution of the configuration we are sampling from, the 2-sample
+    $t$-test is the appropriate statistical test. Our significance level is
+    taken to be $\alpha = 0.01$. There are 128 such tests, the vast majority of
+    which yield significant results. We record the insignificant results in
+    Table \ref{tab:stats}. For example, there is no significant difference
+    between the configuration with small regions and 16 threads per block, and
+    either configurations with no optimizations and 128 and 256 threads per
+    block.  This is evident in Figure \ref{fig:means}. The sample distributions
+    from each configuration are displayed in Figure \ref{fig:boxplots}.
+
     Our experiment shows that there is a negligible speedup in performing the
     region optimization. In fact, by comparing the mean update time in Table
     \ref{tab:means}, we observe that the optimizations actually worsen the
-    overall performance of the simulations. We perform pairwise 2-sample
-    $t$-tests on each series we collected in the experiment and record the
-    results in Table \ref{tab:ttests}. 
+    overall performance of the simulations. Copying from the CPU to the GPU and
+    vice versa is the likeliest cause for the added cost to the performance of
+    the optimizations. The basic data model has an SDL bitmap and a
+    lower-resolution game board which is represented on both the CPU and GPU.
+    Both optimizations add an additional board, at lower resolutions to the
+    game board itself, which is again represented on both the CPU and GPU. The
+    improvements in performance by ignoring inactive regions are more than
+    offset by the memory copying between the CPU and GPU.
+
+    There is essentially no improvement in performance as the number of threads
+    per block increases. This is likely because the total number of active
+    threads running on the GPU does not change as the number of threads per
+    block increases. Since the Game of Life update algorithm is an
+    embarassingly parallel problem, there is likely no added benefit to the
+    changing the structure of each block. This does not explain the apparent
+    speed penalty for small regions incurred for 64, 128, and 256 threads per
+    block (see Figure \ref{fig:boxplots}), which doesn't yield a simple
+    interpretation.
+    
 
     \begin{figure}[t]
         \centering
         \includegraphics[width=\textwidth]{../images/plot.jpg}
-        \caption{}
+        \caption{[Give me a caption]}
         \label{fig:means}
     \end{figure}
 
     \begin{figure}[t]
         \centering
         \includegraphics[width=\textwidth]{../images/boxplot.jpg}
-        \caption{}
-        \label{fig:means}
+        \caption{[Give me a caption]}
+        \label{fig:boxplots}
     \end{figure}
 
     \begin{table}
@@ -240,12 +282,12 @@
  0 &   0  & 32 &  64  &   -0.969775&  0.332276 \\
  5 &  50  & 32 &  64  &   -0.165566&  0.868515 \\
  0 &   0  & 128 & 256 &    0.892050 &  0.372473 \\
-50 &  -1  & 128 &   0 &   -1.870520 &  0.061558 \\
+50 &  Serial  & 128 &   Serial &   -1.870520 &  0.061558 \\
 \bottomrule
 \end{tabular}
-        \caption{Statistically insignificant 2-sample $t$-test results ($p =
+        \caption{Statistically insignificant 2-sample $t$-test results ($p \geq 
             10^{-2}$).}
-        \label{tab:jj}
+        \label{tab:stats}
     \end{table}<++>
 
 \end{document}
