@@ -170,29 +170,8 @@ We had two major findings: using the GPU significantly speeds up the update rate
 
     We ran 1000 iterations of our serially-implemented simulation and collected the running time of each of the 1000 updates in a file. We did five similar runs for our parallel implementation, testing threads per block values of 16, 32, 64, 128, and 256.
 
-    While running our simulations, we noticed a possible way to speed up our code further: because there are oftentimes large regions of the board in which there are no live cells, we can know that there is no need to check for updates in such regions. Thus, running the kernel function on those cells is computationally wasteful. In order to reduce the effects of this inefficiency, we overlay yet another grid onto our board. This ``regions" grid, which is of lower dimension than our grid of cells, holds the a count of the number of live cells within its boundaries. We then modify our GPU kernels so that they only run the main body on cells that are in regions with at least one live cell. We again run 1000 iterations of this program, testing all ten combinations of the five threads per block values from above and a ``region" dimension of either 5 or 50. In our current implementation, we ignore edge cases for simplicity (within a region, we must actually check the entirety of the region as well as another layer of cells surrounding it in order to ensure no cell within the region will be updated), so these tests report a lower runtime for our optimized runs than they would if our optimization were implemented completely.
+    While running our simulations, we noticed a possible way to speed up our code further: because there are oftentimes large regions of the board in which there are no live cells, we can know that there is no need to check for updates in such regions. Thus, running the kernel function on those cells is computationally wasteful. In order to reduce the effects of this inefficiency, we overlay yet another grid onto our board. This ``regions" grid, which is of lower dimension than our grid of cells, holds the a count of the number of live cells within its boundaries. We then modify our GPU kernels so that they only run the main body on cells that are in regions with at least one live cell. We again run 1000 iterations of this program, testing all ten combinations of the five threads per block values from above and a ``region" dimension of either 5 or 50. In our current implementation, we ignore edge cases for simplicity (within a region, we must actually check the entirety of the region as well as another layer of cells surrounding it in order to ensure no cell within the region will be updated), so these tests report a lower runtime for our optimized runs than they would if our optimization were implemented completely. For the resulting means, see Table \ref{tab:means} and Figure \ref{fig:means}.
     
-    Our experiment shows that there is a negligible speedup in performing the
-    region optimization. In fact, by comparing the mean update time in Table
-    \ref{tab:means}, we observe that the optimizations actually worsen the
-    overall performance of the simulations. We perform pairwise 2-sample
-    $t$-tests on each series we collected in the experiment and record the
-    results in Table \ref{tab:ttests}. 
-
-    \begin{figure}[t]
-        \centering
-        \includegraphics[width=\textwidth]{../images/plot.jpg}
-        \caption{}
-        \label{fig:means}
-    \end{figure}
-
-    \begin{figure}[t]
-        \centering
-        \includegraphics[width=\textwidth]{../images/boxplot.jpg}
-        \caption{}
-        \label{fig:means}
-    \end{figure}
-
     \begin{table}
         \centering
         \begin{tabular}{llr}
@@ -218,6 +197,31 @@ We had two major findings: using the GPU significantly speeds up the update rate
         \caption{[Better caption]}
         \label{tab:means} t
     \end{table}
+    
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{../images/plot.jpg}
+        \caption{}
+        \label{fig:means}
+    \end{figure}
+    
+    Our experiment shows that there is a negligible speedup in performing the
+    region optimization. In fact, by comparing the mean update time in Table
+    \ref{tab:means}, we observe that the optimizations actually worsen the
+    overall performance of the simulations. We perform pairwise 2-sample
+    $t$-tests on each series we collected in the experiment and record the
+    results in Table \ref{tab:ttests}. 
+
+    
+
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{../images/boxplot.jpg}
+        \caption{}
+        \label{fig:means}
+    \end{figure}
+
+    
 
     \begin{table}
         \centering
