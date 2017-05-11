@@ -47,11 +47,9 @@
 	\item summarize evaluation results
 \end{itemize}
 
-	We implemented a variation of Conway's Game of Life -- a cellular automaton simulation created by the mathematician John Conway in order to explored the role of various types of optimization within it. Scientific computing and large-scale simulations are incredibly useful across a variety of fields. However, many of these programs are prohibitively slow. Therefore the algorithms and design of these programs is crucial.
+	We implement a variation of Conway's Game of Life -- a cellular automaton simulation created by the mathematician John Conway. Scientific computing and large-scale simulations are incredibly useful across a variety of fields. However, many of these programs are prohibitively slow. Therefore the algorithms and design of these programs is crucial. Although Life was initially created as a tool to explore computability, Turing machines, and Von Neumann machines, the various types of optimization we explore in our project are applicable to a wide variety of graphics-intensive programs. 
 	
-	[TRANSITION] Life is simply a series of iterations of a rendering of a grid of cells, all of which are either dead or alive. Each cell's state is determined by the states of its direct neighbors. Life provides an interesting basic model for population growth and is an ideal demonstration of complex systems arising from simple rules. 
-
-        We implement a version of the Game of Life and render the simulation on
+	The Game of Life is simply a series of iterations of a rendering of a grid of cells. Each cell is either dead or alive, and there exists a simple deterministic algorithm that decides each cell's state at the next iteration. We implement a version of the Game of Life and render the simulation on
         an interactive graphical interface using the SDL framework, providing
         basic user controls such as pausing and unpausing the simulation,
         stepping through one increment of the simulation, activating and
@@ -227,7 +225,7 @@
             & 256 & 19.919 \\ \bottomrule
         \end{tabular}
         \caption{[Better caption]}
-        \label{tab:means}
+        \label{tab:means} t
     \end{table}
 
     \begin{table}
