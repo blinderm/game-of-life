@@ -2,7 +2,7 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{amsfonts,amsmath}
 \usepackage[affil-it]{authblk}
-\usepackage{subcaption}
+\usepackage{subfig}
 \usepackage{multirow}
 \usepackage{parskip}
 \usepackage[]{graphicx}
@@ -153,23 +153,11 @@
     \item can randomize a board
     \item can load board from file
   \end{itemize} 
-  During the simulation, the user also has the ability to: 
-  \begin{itemize}
-    \item left-click (or drag) to bring dead cells to life
-    \item right-click (or drag) to kill live cells
-    \item press \texttt{Ctrl-Q} to quit the simulation (close the GUI) 
-    \item press \texttt{Ctrl-C} to clear the board (set all cells to dead) 
-    \item press \texttt{Ctrl-P} to pause the simulation (set the global
-      \texttt{running} variable to false)
-    \item press \texttt{Ctrl-Space} to advance the iteration one step (run the
-      update function just once)
-    \item press \texttt{Ctrl-G} to add a ``glider" shape to the board (write a
-      glider oriented at the mouse location)
-  \end{itemize} 
-
+  During the simulation, the user's options are provided in Table
+  \ref{tab:gui}.
   \begin{table}
     \centering
-    \begin{tabular}{lp{10cm}} \toprule
+    \begin{tabular}[b]{@{}lp{10cm}@{}} \toprule
       Input & Behavior \\ \midrule
       Left click (or drag) & Toggle the cell enclosing the current mouse
       pointer's location to ``alive.'' \\
@@ -178,10 +166,14 @@
       Press \texttt{CTRL-Q} & Quits the simulation and closes the GUI. \\
       Press \texttt{CTRL-C} & Clears the simulation game board. \\
       Press \texttt{CTRL-P} & (Un)pauses the simulation. \\
+      Press \texttt{CTRL-SPACE} & Advances the simulation by one step (while
+      paused). \\
+      Press \texttt{CTRL-G} & Populates the region around the mouse's current
+      location with a glider. \\ \bottomrule
     \end{tabular}
-    \caption{<+Caption text+>}
-    \label{tab:<+label+>}
-  \end{table}<++>
+    \caption{User input options together with the resulting behavior.}
+    \label{tab:gui}
+  \end{table}
   Given that the update algorithm is itself simple to implement, most of our
   difficulties were centered around coordinating between the GUI display, user
   input, and the update algorithm.	
@@ -270,29 +262,29 @@
   \end{figure}
 
   \begin{figure}[t]
-    \centering
-    \begin{subfigure}[t]{0.3\textwidth}
-    \includegraphics[width=1\textwidth]{../images/plot.eps}
-      \caption{[Give me a caption]}
-      \label{fig:comparison}  
-    \end{subfigure}
-    \begin{subtable}[t]{0.4\textwidth}
       \centering
-        \begin{tabular}{@{}*{4}{r}@{}} \toprule
-          \multirow{2}{*}{T/B} 
-          & \multicolumn{3}{c}{Region Dimension} \\
-                           & 0        & 5       & 50 \\ \midrule 
-          Serial           &  19.514  &  N/A    & NA \\
-          16               &  15.402  &  17.589 &  18.981 \\
-          32               &  18.040  &  18.646 &  20.290 \\
-          64               &  17.963  &  24.019 &  18.633 \\
-          128              &  17.565  &  24.675 &  19.660 \\
-          256              &  17.644  &  23.528 & 19.919 \\ \bottomrule
-      \end{tabular}
-      \caption{[Better caption]}
-      \label{tab:means}
-    \end{subtable}
-
+      \begin{minipage}{\textwidth}
+          \begin{subfigure}[t]{0.4\textwidth}
+              \includegraphics[width=0.6\textwidth]{../images/plot.eps}
+              \caption{[Give me a caption]}
+              \label{fig:comparison}  
+          \end{subfigure}
+          \begin{subtable}[t]{0.4\textwidth}
+              \begin{tabular}[b]{@{}*{4}{r}@{}} \toprule
+                  \multirow{2}{*}{T/B} 
+                  & \multicolumn{3}{c}{Region Dimension} \\
+                  & 0        & 5       & 50 \\ \midrule 
+                  Serial           &  19.514  &  N/A    & NA \\
+                  16               &  15.402  &  17.589 &  18.981 \\
+                  32               &  18.040  &  18.646 &  20.290 \\
+                  64               &  17.963  &  24.019 &  18.633 \\
+                  128              &  17.565  &  24.675 &  19.660 \\
+                  256              &  17.644  &  23.528 & 19.919 \\ \bottomrule
+              \end{tabular}
+              \caption{[Better caption]}
+              \label{tab:means}
+          \end{subtable}
+      \end{minipage}
   \end{figure}
 
 
