@@ -69,27 +69,27 @@
   machines, the various types of optimization we explore in our project are
   applicable to a wide variety of graphics-intensive programs. 
 
-  The Game of Life is simply a series of iterations of a rendering of a grid of
+  The Game of Life is a series of iterations of a rendering of a grid of
   cells. Each cell is either dead or alive, and there exists a simple
   deterministic algorithm that decides each cell's state at the next iteration.
   We implement a version of the Game of Life and render the simulation on an
   interactive graphical interface using the SDL framework, providing basic user
-  controls such as pausing and unpausing the simulation, stepping through one
-  increment of the simulation, activating and deactivating cells, and clearing
-  and quitting the application.
+  controls such as pausing and unpausing the simulation, stepping through the 
+  simulation on iteration at a time,activating and deactivating cells, and 
+  clearing and quitting the application.
 
   For each iteration, we use Conway's algorithm to determine the state (dead or
   alive) of every cell in our grid. Because this algorithm takes as input a cell
   along with the states of each of its eight immediate neighbors, this algorithm
   naturally lends itself to an ``embarrasingly parallel" stencil computation on
   the GPU. We also have two threads running on the CPU in addition to the main
-  update thread-- one for recording and acting on user input from the mouse; the
+  update thread -- one for recording and acting on user input from the mouse; the
   other from the keyboard. 
 
-  To evaluate our system, we first varied the number of threads per block in our
-  stencil function calls. Then, we implemented a feature that allowed us to find
+  To evaluate our system, we first vary the number of threads per block in our
+  stencil function calls. Then, we implement a feature that allows us to find
   regions with no live cells in order to skip their calls to the update
-  functions.  We had two major findings: using the GPU significantly speeds up
+  functions.  We have two major findings: using the GPU significantly speeds up
   the update rate and the optimization actually slows down the update rate
   (compared to the unoptimized GPU). We hypothesize the optimization was
   ineffective because the costs of copying and extra evaluations outweigh the
@@ -125,12 +125,12 @@
 %     \item figures if appropriate
 % \end{itemize}
 
-  The rules to Conway's Game of Life are simple. There exists a grid of cells,
-  where every cell is either dead or alive. At each iteration of the simulation,
+  The rules to Conway's Game of Life are simple. There exists a grid of cells in
+  which every cell is either dead or alive. At each iteration of the simulation,
   Conway's algorithm is applied to every cell in order to determine its next
   state. The algorithm\footnote{The details and history of which be found at
       \href{https://en.wikipedia.org/wiki/Conway's\_Game\_of\_Life}{\texttt{https://en.wikipedia.org/wiki/Conway's\_Game\_of\_Life}}.}
-is defined in Algorithm \ref{alg:update}.
+is defined in Algorithm 1.%\ref{alg:update}.
 
   \begin{algorithm}[t]
       \caption{How Conway's Game of Life updates the grid of cells
@@ -158,7 +158,7 @@ is defined in Algorithm \ref{alg:update}.
       \label{alg:update}
   \end{algorithm}
 
-  With these baseline rules, we implement a system where the user was able to
+  With these baseline rules, we implement a system in which the user is able to
   click cells to switch their state, pause and run the simulation
   automatically, or step through various iterations. We also have features that
   go beyond the basic simulation, including reading boards from files, adding
@@ -195,38 +195,39 @@ is defined in Algorithm \ref{alg:update}.
     \label{tab:gui}
   \end{table}
   Given that the update algorithm is itself simple to implement, most of our
-  difficulties were centered around coordinating between the GUI display, user
-  input, and the update algorithm.	
+  difficulties were centered around coordinating between the GUI display, the 
+  user input CPU threads, and the update algorithm on the GPU.	
 
   We start development with the GUI, which is responsible for displaying the
-  board and updates with reasonable resposen time. We use the bitmap class from
+  board and updates with reasonable response time. We use the bitmap class from
   the Galaxies lab for the GUI because it offers high resolution for the display
   and easily adjustable parametes. Reusing the bitmap also follows Lampson's
   principle of ``reuse good ideas" - we already have a class built for exactly
-  what we want to do, so there's noneed to reinvent the wheel. The GUI itself
-  provided no difficulties with the implementation. 
+  what we want to do, so there's no need to reinvent the wheel. The GUI itself
+  gave us no difficulties in our implementation. 
 
   Although both the bitmap class and The Game of Life are represented with grids,
-  the bitmap provides a much higher resolution of squares than we wanted to use
-  for the representation of cells on the grid. So there are two options: just use
+  the bitmap provides a much higher resolution of squares than we wish to use
+  for the representation of cells on the grid. Thus there are two options: use
   the bitmap and have multiple pixels refer to the same cell, or have a separate
   struct for the grid and translate between the grid struct and the bitmap. We
-  opted for the latter. Further, this separation will allow us to more easily
-  manipulate and update the representation and then simply update the
-  visualization afterwards using Conway's original algorithm. The cells on the
-  game board will be initially populated from either a random starting
-  configuration, one of some set of preset starting configurations, or by the
-  user clicking squares on the board. 
+  opt for the latter. This separation allows us to more easily manipulate and
+  update the representation and then simply update the visualization afterwards
+  using Conway's original algorithm. The cells on the game board are initially 
+  populated from either a random starting configuration, one of some set of
+  preset starting configurations, or by the user clicking squares on the board. 
 
   To handle user input, we intended to use a scheduler (as in the Worm lab) in
   order to split up listening for input and updating across processes. We quickly
   ran into problems with this approach, as the listeners would sometimes fail to
-  register input if they weren't being executed by the schedule at the exact
+  register input if they weren't being executed by the scheduler at the exact
   moment the user clicked or pressed a button. Thus, we realized we needed
   complete concurrency on the CPU and switched to an implementation with threads:
   one for mouse input, one for keyboard input, and the main one to run updates.
   At this point, we applied Lampson's lesson of ``Throw one away" and gave up on
-  our scheduler based approach.
+  our scheduler-based approach. As we will discuss later, our listener threads 
+  handle user input perfectly. This switch from the scheduler to the listener
+  threads on the CPU was integral in our building a working program.
 
   In order for the threads to properly take in and act on user input, we have a
   struct which contains the information necessary for the various actions in the
@@ -239,7 +240,7 @@ is defined in Algorithm \ref{alg:update}.
   of arguments is passed to the functions so that they may act appropriately. 
 
   We use SDL to register user input from both the mouse and the keyboard. Any
-  button press or mouse click triggers an update to the main \texttt{SDL\_Event},
+  mouseclick or button-presstriggers an update to the main \texttt{SDL\_Event},
   which is then sent to the mouse and keyboard event handler loops. Mouse events
   are handled by checking that the mouse state generated from
   \texttt{SDL\_GetMouseState} on the current location is one of
@@ -249,8 +250,7 @@ is defined in Algorithm \ref{alg:update}.
   simulation to toggle the cell in which the mouse pointer is located to
   ``alive,'' and similarly, pressing down the right mouse button triggers the
   simulation to toggle the cell to ``dead.'' This feature allows the user to
-  ``click and drag'' to toggle a series of adjacent cells to ``alive'' or
-  ``dead'.''
+  ``click and drag'' to toggle a series of adjacent cells.
 
   Keyboard events are handled so that a full button press and release are
   required before the command is executed in the simulation. Upon receiving a new
@@ -270,7 +270,7 @@ is defined in Algorithm \ref{alg:update}.
   because the state of a cell depends only on the states of the cells in the past
   iteration (i.e. not on any of the states of the other updated cells). Between
   each call of the update function, we copy the grid between the GPU and the CPU
-  in order to account or user input.
+  in order to account for user input.
 
   \section{Evaluation}
 
@@ -332,7 +332,7 @@ is defined in Algorithm \ref{alg:update}.
   \texttt{numpy} package to run our analyses, and the \texttt{matplotlib} library
   to produce our figures.  
 
-  In addition to ensuring that our implementation properly reflected Conway's
+  In addition to ensuring that our implementation properly reflects Conway's
   rules, we verify that the concurrent components of our system function
   properly. For our listener threads on the CPU, we notice from running many
   tests that the program's response to user input is both immediate and correct. 
@@ -351,12 +351,12 @@ is defined in Algorithm \ref{alg:update}.
   Our parallel implementation is similar, although we count neighbors and update
   our cell grid using blocks of threads. 
 
-  We ran 1000 iterations of our serially-implemented simulation and collected the
-  running time of each of the 1000 updates in a file. We did five similar runs
+  We run 1000 iterations of our serially-implemented simulation and collect the
+  running time of each of the 1000 updates in a file. We do five similar runs
   for our parallel implementation, testing threads per block values of 16, 32,
   64, 128, and 256.
 
-  Before proceeding to the experimental analysis, we removed a consistent outlier
+  Before proceeding to the experimental analysis, we remove a consistent outlier
   from the results of each configuration, which was always the first update.
   There is likely additional startup costs to the initial GPU setup which is
   captured in the first run of the update, which is true across each
@@ -373,27 +373,6 @@ is defined in Algorithm \ref{alg:update}.
   and 256 threads per block.  This is evident in Figure \ref{fig:comparison}. The
   sample distributions from each configuration are displayed in Figure
   \ref{fig:boxplots}.
-
-  Our experiment shows that there is a negligible speedup in performing the
-  region optimization. In fact, by comparing the mean update time in Table
-  \ref{tab:means}, we observe that the optimizations actually worsen the overall
-  performance of the simulations. Copying from the CPU to the GPU and vice versa
-  is the likeliest cause for the added cost to the performance of the
-  optimizations. The basic data model has an SDL bitmap and a lower-resolution
-  game board which is represented on both the CPU and GPU.  Both optimizations
-  add an additional board, at lower resolutions to the game board itself, which
-  is again represented on both the CPU and GPU. The improvements in performance
-  by ignoring inactive regions are more than offset by the memory copying between
-  the CPU and GPU.
-
-  There is essentially no improvement in performance as the number of threads per
-  block increases. This is likely because the total number of active threads
-  running on the GPU does not change as the number of threads per block
-  increases. Since the Game of Life update algorithm is an embarassingly parallel
-  problem, there is likely no added benefit to the changing the structure of each
-  block. This does not explain the apparent speed penalty for small regions
-  incurred for 64, 128, and 256 threads per block (see Figure
-  \ref{fig:boxplots}), which doesn't yield a simple interpretation.
 
   While running our simulations, we noticed a possible way to speed up our code
   further: because there are oftentimes large regions of the board in which there
@@ -412,6 +391,31 @@ is defined in Algorithm \ref{alg:update}.
   region will be updated), so these tests report a lower runtime for our
   optimized runs than they would if our optimization were implemented completely.
   For the resulting means, see Table \ref{tab:means} and Figure \ref{fig:comparison}.
+  
+  Our experiment shows that there is a negligible speedup in performing the
+  region optimization. In fact, by comparing the mean update time in Table
+  \ref{tab:means}, we observe that the optimizations actually worsen the overall
+  performance of the simulations. Copying from the CPU to the GPU and vice versa
+  is the likeliest cause for the added cost to the performance of the
+  optimizations. The basic data model has an SDL bitmap and a lower-resolution
+  game board which is represented on both the CPU and GPU.  Both optimizations
+  add an additional board which is again represented on both the CPU and GPU. 
+  The improvements in performance by ignoring inactive regions are more than 
+  offset by the memory copying between the CPU and GPU.
+
+  There is essentially no improvement in performance as the number of threads per
+  block increases. This is likely because the total number of active threads
+  running on the GPU does not change as the number of threads per block
+  increases. Since the Game of Life update algorithm is an embarassingly parallel
+  problem, there is likely no added benefit to the changing the structure of each
+  block. This does not explain the apparent speed penalty for small regions
+  incurred for 64, 128, and 256 threads per block (see Figure
+  \ref{fig:boxplots}), which doesn't yield a simple interpretation.
+  
+  Thus, we see that our parallelization of Conway's algorithm using GPU kernels
+  is the optimization feature that consistently improves our program's
+  efficiency.
+
   \begin{table}
     \centering
     \caption{Statistically insignificant 2-sample $t$-test results ($p = 0.01$).}
