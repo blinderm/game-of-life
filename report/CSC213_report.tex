@@ -2,8 +2,10 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{amsfonts,amsmath}
 \usepackage[affil-it]{authblk}
-\usepackage{subfig}
+\usepackage{subcaption}
 \usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \usepackage{parskip}
 \usepackage[]{graphicx}
 \usepackage{mathrsfs}
@@ -126,25 +128,43 @@
   The rules to Conway's Game of Life are simple. There exists a grid of cells,
   where every cell is either dead or alive. At each iteration of the simulation,
   Conway's algorithm is applied to every cell in order to determine its next
-  state. The algorithm is defined as follows:
+  state. The algorithm\footnote{The details and history of which be found at
+      \href{https://en.wikipedia.org/wiki/Conway's\_Game\_of\_Life}{\texttt{https://en.wikipedia.org/wiki/Conway's\_Game\_of\_Life}}.}
+is defined in Algorithm \ref{alg:update}.
 
-% \begin{itemize}
-%     \item Any live cell with fewer than two live neighbours dies, as if caused
-%         by underpopulation.
-%     \item Any live cell with two or three live neighbours lives on to the next
-%         generation.
-%     \item Any live cell with more than three live neighbours dies, as if by
-%         overpopulation.
-%     \item Any dead cell with three live neighbours becomes a live cell, as if
-%         by reproduction.
-% \end{itemize} 
+  \begin{algorithm}[t]
+      \caption{How Conway's Game of Life updates the grid of cells
+          Here, \textit{Grid} is a 2-dimensional array of cells, which all have
+          a \textit{state} field. Two cells are neighbors if they are adjacent
+      in the 2-dimensional array.}
+      \begin{algorithmic}
+          \Function{update\_grid}{\textit{Grid}} 
+          \For {$g \in \textit{Grid}$}
+          \State $N(g) \gets \{ h \in \textit{Grid} : \textrm{$h$ is a neighbor
+          of $g$}\}$
+          \State $s \gets \sum_{h \in N(g)} h.\textit{state}$
+          \If {$s < 2$ or $s > 3$}
+          \State $g.\textit{state} \gets 0$
+          \Else
+          \If {$s = 2$ and $g.\textit{state} = 0$}
+          \State $g.\textit{state} \gets 0$
+          \Else 
+          \State $g.\textit{state} \gets 1$
+          \EndIf
+          \EndIf
+          \EndFor
+          \EndFunction
+      \end{algorithmic}
+      \label{alg:update}
+  \end{algorithm}
 
-  [CITE WIKIPEDIA, ALSO INSERT PICTURE] With these baseline rules, we implement a
-  system where the user was able to click cells to switch their state, pause and
-  run the simulation automatically, or step through various iterations. We also
-  have features that go beyond the basic simulation, including reading boards
-  from files, adding gilders to the board, and having cells change color as the
-  age. The exact specifications for adjustable features are as follows:
+  With these baseline rules, we implement a system where the user was able to
+  click cells to switch their state, pause and run the simulation
+  automatically, or step through various iterations. We also have features that
+  go beyond the basic simulation, including reading boards from files, adding
+  gilders to the board, and having cells change color as the age. The exact
+  specifications for adjustable features are as follows:
+
   \begin{itemize}
     \item GUI (game board) display size
     \item cell size (thus adjusting the number of cells) 
@@ -155,7 +175,7 @@
   \end{itemize} 
   During the simulation, the user's options are provided in Table
   \ref{tab:gui}.
-  \begin{table}
+  \begin{table}[t]
     \centering
     \begin{tabular}[b]{@{}lp{10cm}@{}} \toprule
       Input & Behavior \\ \midrule
@@ -257,34 +277,34 @@
   \begin{figure}[t]
     \centering
       \includegraphics[width=\textwidth]{../images/boxplot.eps}
-    \caption{[Give me a caption]}
+    \caption{Distribution of Update Times by Threads Per Block (T/B) and Optimization Region Dimension conditions}
     \label{fig:boxplots}
   \end{figure}
 
   \begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.6\textwidth}
+    \includegraphics[width=0.9\textwidth]{../images/plot.eps}
+      \caption{Comparing Mean Update Time (ms) to Thread Per Block (T/B)}
+      \label{fig:comparison}  
+    \end{subfigure}
+    \begin{subfigure}[t]{0.3\textwidth}
       \centering
-      \begin{minipage}{\textwidth}
-          \begin{subfigure}[t]{0.4\textwidth}
-              \includegraphics[width=0.6\textwidth]{../images/plot.eps}
-              \caption{[Give me a caption]}
-              \label{fig:comparison}  
-          \end{subfigure}
-          \begin{subtable}[t]{0.4\textwidth}
-              \begin{tabular}[b]{@{}*{4}{r}@{}} \toprule
-                  \multirow{2}{*}{T/B} 
-                  & \multicolumn{3}{c}{Region Dimension} \\
-                  & 0        & 5       & 50 \\ \midrule 
-                  Serial           &  19.514  &  N/A    & NA \\
-                  16               &  15.402  &  17.589 &  18.981 \\
-                  32               &  18.040  &  18.646 &  20.290 \\
-                  64               &  17.963  &  24.019 &  18.633 \\
-                  128              &  17.565  &  24.675 &  19.660 \\
-                  256              &  17.644  &  23.528 & 19.919 \\ \bottomrule
-              \end{tabular}
-              \caption{[Better caption]}
-              \label{tab:means}
-          \end{subtable}
-      \end{minipage}
+      \begin{tabular}[b]{@{}*{4}{r}@{}} \toprule
+          \multirow{2}{*}{T/B} 
+          & \multicolumn{3}{c}{Region Dimension} \\
+                           & 0        & 5       & 50 \\ \midrule 
+          Serial           &  19.514  &  N/A    & NA \\
+          16               &  15.402  &  17.589 &  18.981 \\
+          32               &  18.040  &  18.646 &  20.290 \\
+          64               &  17.963  &  24.019 &  18.633 \\
+          128              &  17.565  &  24.675 &  19.660 \\
+          256              &  17.644  &  23.528 & 19.919 \\ \bottomrule
+      \end{tabular}
+      \caption{Mean Update Time (ms) by Threads Per Block (T/B) and Optimization Region Dimension}
+      \label{tab:means}
+    \end{subfigure}
+
   \end{figure}
 
 
